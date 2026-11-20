@@ -25,71 +25,63 @@ process CLAIR3 {
     task.ext.when == null || task.ext.when
 
     script:
+    def model_name = meta.model_name ?: ""
 
-    def model_name
-
-    if (meta.model_name) {
-        model_name = meta.model_name
-    }
-    else {
-        error "Unable to determine Clair3 model: meta.model_name is not set and platform is not nanopore or illumina."
-    }
-    println "DEBUG: selected model_name = ${model_name}"
-    def model_base_dir
-    def package_model_base_idr = "/usr/local/bin/models/"
-
-    if (!user_model_base_dir) {
-        if (workflow.containerEngine in ['singularity', 'docker', 'podman']) {
-            model_base_dir = package_model_base_idr
-        }
-        else {
-            error(
-                "Clair3 packaged models are only available in Docker/Singularity/Podman containers. " + "Please use one of these profiles or provide a user_model instead."
-            )
-        }
-    }
-    else{
-        model_base_dir = user_model_base_dir
+    if (!model_name) {
+        error "Unable to determine Clair3 model: meta.model_name is not set."
     }
 
-    println "DEBUG:  model_base_dir = ${model_base_dir}"
+    // Path to packaged models (inside the container)
+    def package_model_base_dir = "/usr/local/bin/models/"
 
-    def model_path ="${package_model_base_idr}/${model_name}"
-
-    if (model_name != 'ont' && model_name != 'ilmn') {
-
-        def model = file("${model_base_dir}/${model_name}")
-        println "DEBUG:  model = ${model.toString()}"
-        if (model.exists() && model.isDirectory()) {
-            model_path = model.toString()
-        }
-        else if (meta.platform == 'nanopore') {
-            model_path = "${package_model_base_idr}/ont"
-        }
-        else if (meta.platform == 'illumina') {
-            model_path = "${package_model_base_idr}/ilmn"
-        }
-    }
-
+    // Path to user-provided models (staged in the Nextflow work directory)
+    def user_model_path = user_model_base_dir ? "\${PWD}/${user_model_base_dir}/${model_name}" : ""
 
     def args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "${meta.id}"
+
     """
+    # Resolve paths using bash inside the container
+    PKG_MODEL="${package_model_base_dir}/${model_name}"
+    USR_MODEL="${user_model_path}"
+    MODEL_PATH=""
+
+    # 1. Check package directory first
+    if [ -d "\$PKG_MODEL" ]; then
+        MODEL_PATH="\$PKG_MODEL"
+    # 2. Check user directory second
+    elif [ -n "\$USR_MODEL" ] && [ -d "\$USR_MODEL" ]; then
+        MODEL_PATH="\$USR_MODEL"
+    # 3. Fallback based on platform
+    else
+        if [ "${platform}" = "nanopore" ]; then
+            MODEL_PATH="${package_model_base_dir}/ont"
+        elif [ "${platform}" = "illumina" ]; then
+            MODEL_PATH="${package_model_base_dir}/ilmn"
+        else
+            # If no platform matches, pass original and let Clair3 fail gracefully
+            MODEL_PATH="\$PKG_MODEL"
+        fi
+    fi
+
+    echo "DEBUG: Selected model_name: ${model_name}"
+    echo "DEBUG: Resolved model path: \$MODEL_PATH"
+
     run_clair3.sh \\
         --bam_fn=\${PWD}/${bam} \\
         --ref_fn=\${PWD}/${reference} \\
         --threads=${task.cpus} \\
         --output=. \\
         --platform=${platform} \\
-        --model_path=${model_path} \\
+        --model_path=\$MODEL_PATH \\
         ${args}
 
     # Rename to add prefix
-    for file in merge_output.vcf.gz \
-            merge_output.vcf.gz.tbi \
-            phased_merge_output.vcf.gz \
-            phased_merge_output.vcf.gz.tbi \
-            merge_output.gvcf.gz \
+    for file in merge_output.vcf.gz \\
+            merge_output.vcf.gz.tbi \\
+            phased_merge_output.vcf.gz \\
+            phased_merge_output.vcf.gz.tbi \\
+            merge_output.gvcf.gz \\
             merge_output.gvcf.gz.tbi; do
     if [ -e "\$file" ]; then
         mv "\$file" "${prefix}\$file"

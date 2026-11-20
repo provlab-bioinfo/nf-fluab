@@ -38,7 +38,6 @@
                 }
             }
         },
-
         "institutional_config_options": {
             "title": "Institutional config options",
             "type": "object",
@@ -174,5 +173,94 @@
         {
             "$ref": "#/$defs/generic_options"
         }
-    ]
+    ],
+    "properties": {
+        "refbase": {
+            "type": "string",
+            "default": "/nfs/Genomics_DEV/projects/xdong/deve/nf-fluab/resources"
+        },
+        "deacon_refdb": {
+            "type": "string",
+            "default": "/nfs/APL_Genomics/db/prod/deacon/v3/panhuman-1.k31w15.idx"
+        },
+        "flu_primers": {
+            "type": "string",
+            "default": "/nfs/Genomics_DEV/projects/xdong/deve/nf-fluab/resources/primers/flu-primers.fa"
+        },
+        "flu_db_msh": {
+            "type": "string",
+            "default": "/nfs/Genomics_DEV/projects/xdong/deve/nf-fluab/resources/mashdb/influenzaDB.msh"
+        },
+        "flu_db_fasta": {
+            "type": "string",
+            "default": "/nfs/Genomics_DEV/projects/xdong/deve/nf-fluab/resources/mashdb/influenzaDB.fasta"
+        },
+        "flu_db_ver": {
+            "type": "string",
+            "default": "influenzaDB-20261006"
+        },
+        "clair3_variant_model": {
+            "type": "string",
+            "default": "/nfs/Genomics_DEV/projects/xdong/deve/nf-fluab/resources/clair3_models/clair3_models_rerio_pytorch"
+        },
+        "typing_db": {
+            "type": "string",
+            "default": "/nfs/Genomics_DEV/projects/xdong/deve/nf-fluab/resources/typing/typing.fa"
+        },
+        "nextclade_datasets_csv": {
+            "type": "string",
+            "default": "/nfs/Genomics_DEV/projects/xdong/deve/nf-fluab/resources/nextclade/nextclade-datasets.csv"
+        },
+        "mashthreshold": {
+            "type": "number",
+            "default": 0.95
+        },
+        "min_hash_coverage": {
+            "type": "number",
+            "default": 0.8
+        },
+        "min_median_multiplicity": {
+            "type": "integer",
+            "default": 10
+        },
+        "max_p_value": {
+            "type": "number",
+            "default": 0.01
+        },
+        "mindepth": {
+            "type": "integer",
+            "default": 10
+        },
+        "minor_allele_fraction": {
+            "type": "number",
+            "default": 0.25
+        },
+        "major_allele_fraction": {
+            "type": "number",
+            "default": 0.75
+        },
+        "consensus_maxambigs": {
+            "type": "number",
+            "default": 0.5
+        },
+        "min_blast_ident": {
+            "type": "integer",
+            "default": 85
+        },
+        "qcov_hsp_perc": {
+            "type": "integer",
+            "default": 75
+        },
+        "max_target_seqs": {
+            "type": "integer",
+            "default": 5
+        },
+        "evalue": {
+            "type": "number",
+            "default": 0.01
+        },
+        "fasta": {
+            "type": "string"
+        }
+    }
 }

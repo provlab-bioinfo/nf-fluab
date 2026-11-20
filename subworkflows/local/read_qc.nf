@@ -78,7 +78,7 @@ workflow READ_QC {
      */
 
     trimmed_reads = READ_QC_ILLUMINA.out.trimmed_reads.mix(READ_QC_NANOPORE.out.trimmed_reads)
-    trimmed_reads.view{}
+    //trimmed_reads.view{}
 
 
 
@@ -86,7 +86,7 @@ workflow READ_QC {
     * Trimmed read statistics
     */
 
-    trimmed_reads.view{"trimmed_reads: $it"}
+    //trimmed_reads.view{"trimmed_reads: $it"}
     SEQKIT_STATS_TRIMMED(trimmed_reads)
 
     CSVTK_CONCAT_TRIMMED_STATS(
@@ -98,7 +98,7 @@ workflow READ_QC {
                     [id: "seqstats.trimmed"],
                     files,
                 )
-        }.view(),
+        }, //.view(),
         "tsv",
         "tsv",
     )
@@ -119,11 +119,7 @@ workflow READ_QC {
 
     DEACON_FILTER(ch_input_deacon)
 
-    DEACON_FILTER.out.fastq_filtered
-        .view { meta, reads ->
-            "DEACON output: meta=${meta}, reads=${reads}"
-        }
-        .set { ch_deacon_filtered }
+
 
     /*
      * Remove zero-size / empty dehosted FASTQ files

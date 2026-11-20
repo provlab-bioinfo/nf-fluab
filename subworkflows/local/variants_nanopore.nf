@@ -7,7 +7,7 @@ workflow VARIANTS_NANOPORE {
 
     main:
 
-    bam_bai.view()
+    //bam_bai.view()
     /*
             Clair3 was seeing no read at 2265. Clair3 filters the alignments with the following four flags:
             read unmapped (0x4)

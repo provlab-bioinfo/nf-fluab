@@ -22,111 +22,6 @@ include { UTILS_NEXTFLOW_PIPELINE } from '../../nf-core/utils_nextflow_pipeline'
     SUBWORKFLOW TO INITIALISE PIPELINE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
-workflow PIPELINE_INITIALISATION_ORG {
-    take:
-    version // boolean: Display version and exit
-    validate_params // boolean: Boolean whether to validate parameters against the schema at runtime
-    monochrome_logs // boolean: Do not use coloured log outputs
-    nextflow_cli_args //   array: List of positional nextflow CLI args
-    outdir //  string: The output directory where the results will be saved
-    input //  string: Path to input samplesheet
-    help // boolean: Display help message and exit
-    help_full // boolean: Show the full help message
-    show_hidden // boolean: Show hidden parameters in the help message
-
-    main:
-
-    ch_versions = channel.empty()
-
-    //
-    // Print version and exit if required and dump pipeline parameters to JSON file
-    //
-    UTILS_NEXTFLOW_PIPELINE(
-        version,
-        true,
-        outdir,
-        workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1,
-    )
-
-    //
-    // Validate parameters and generate parameter summary to stdout
-    //
-
-    def before_text = ""
-    def after_text = ""
-    if (monochrome_logs) {
-        before_text = before_text.replaceAll(/\033\[[0-9;]*m/, '')
-    }
-
-    command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input samplesheet.csv --outdir <OUTDIR>"
-
-    UTILS_NFSCHEMA_PLUGIN(
-        workflow,
-        validate_params,
-        null,
-        help,
-        help_full,
-        show_hidden,
-        before_text,
-        after_text,
-        command,
-        false,
-    )
-
-    //
-    // Check config provided to the pipeline
-    //
-    UTILS_NFCORE_PIPELINE(
-        nextflow_cli_args
-    )
-
-    //
-    // Custom validation for pipeline parameters
-    //
-    validateInputParameters()
-
-    //
-    // Create channel from input file provided through params.input
-    //
-
-    channel.fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
-        .map { meta, fastq_1, fastq_2, long_fastq ->
-
-            if (long_fastq != 'NA') {
-                // Nanopore
-                return [[meta.id, 'nanopore'], meta + [single_end: true, platform: 'nanopore'], [file(long_fastq)]]
-            }
-
-            if (fastq_2 != 'NA') {
-                // Illumina paired-end
-                return [[meta.id, 'illumina'], meta + [single_end: false, platform: 'illumina'], [file(fastq_1), file(fastq_2)]]
-            }
-
-            // Illumina single-end
-            return [[meta.id, 'illumina'], meta + [single_end: true, platform: 'illumina'], [file(fastq_1)]]
-        }
-        .groupTuple()
-        .map { samplesheet ->
-
-            def key = samplesheet[0]
-            def metas = samplesheet[1]
-            def fastqs = samplesheet[2]
-
-            validateInputSamplesheet(
-                [key, metas, fastqs]
-            )
-        }
-        .map { meta, fastqs ->
-            [meta, fastqs.flatten()]
-        }
-        .set { ch_samplesheet }
-
-    emit:
-    samplesheet = ch_samplesheet
-    versions = ch_versions
-}
-
 workflow PIPELINE_INITIALISATION {
     take:
     version // boolean: Display version and exit
@@ -185,10 +80,6 @@ workflow PIPELINE_INITIALISATION {
         nextflow_cli_args
     )
 
-    //
-    // Custom validation for pipeline parameters
-    //
-    validateInputParameters()
 
     def input_samples = samplesheetToList(
         input,
@@ -452,12 +343,6 @@ def validateUniqueSamples(samples) {
         )
     }
 }
-//
-// Check and validate pipeline parameters
-//
-def validateInputParameters() {
-    genomeExistsError()
-}
 
 //
 // Validate channels from input samplesheet
@@ -507,27 +392,8 @@ def validateInputSamplesheet(input) {
 
     return [metas[0], fastqs]
 }
-//
-// Get attribute from genome config file e.g. fasta
-//
-def getGenomeAttribute(attribute) {
-    if (params.genomes && params.genome && params.genomes.containsKey(params.genome)) {
-        if (params.genomes[params.genome].containsKey(attribute)) {
-            return params.genomes[params.genome][attribute]
-        }
-    }
-    return null
-}
 
-//
-// Exit pipeline if incorrect --genome key provided
-//
-def genomeExistsError() {
-    if (params.genomes && params.genome && !params.genomes.containsKey(params.genome)) {
-        def error_string = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" + "  Genome '${params.genome}' not found in any config files provided to the pipeline.\n" + "  Currently, the available genome keys are:\n" + "  ${params.genomes.keySet().join(", ")}\n" + "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        error(error_string)
-    }
-}
+
 //
 // Generate methods description for MultiQC
 //

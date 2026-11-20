@@ -37,25 +37,25 @@ workflow INFLUENZA {
 
     main:
     ch_samplesheet.view { "SAMPLESHEET: $it" }
-    // READ_QC(ch_samplesheet)
-    // ch_qcreads = READ_QC.out.qcreads
-    // ch_qcreads.view()
+    READ_QC(ch_samplesheet)
+    ch_qcreads = READ_QC.out.qcreads
+    //ch_qcreads.view()
 
-    SEEK_REFERENCES(
+    /* SEEK_REFERENCES(
         ch_samplesheet,
         params.flu_db_msh,
         params.flu_db_fasta,
-    )
-    MAPPING(ch_samplesheet, SEEK_REFERENCES.out.ref_fasta_fai)
+    ) */
+    //MAPPING(ch_samplesheet, SEEK_REFERENCES.out.ref_fasta_fai)
     // Find the best matching reference for all samples identically
-    // SEEK_REFERENCES(
-    //     ch_qcreads,
-    //     params.flu_db_msh,
-    //     params.flu_db_fasta,
-    // )
+    SEEK_REFERENCES(
+        ch_qcreads,
+        params.flu_db_msh,
+        params.flu_db_fasta,
+    )
 
     //println "ref = ${SEEK_REFERENCES.out.ref_fasta_fai[1]}"
-    //MAPPING(ch_qcreads, SEEK_REFERENCES.out.ref_fasta_fai)
+    MAPPING(ch_qcreads, SEEK_REFERENCES.out.ref_fasta_fai)
 
     VARIANTS(MAPPING.out.bam_bai, SEEK_REFERENCES.out.ref_fasta_fai)
     CONSENSUS(
@@ -84,14 +84,14 @@ workflow INFLUENZA {
         params.nextclade_datasets_csv,
     )
 
-    // CREATE_MASTER_REPORT(
-    //     CONSENSUS.out.all_consensus,
-    //     CONSENSUS.out.report,
-    //     READ_QC.out.read_qc_report,
-    //     TYPING.out.typing_report.map { _meta, _tsv -> _tsv },
-    //     NEXTCLADE.out.nextclade_report,
-    //     params.flu_db_ver
-    // )
+    CREATE_MASTER_REPORT(
+        CONSENSUS.out.all_consensus,
+        CONSENSUS.out.report,
+        READ_QC.out.read_qc_report,
+        TYPING.out.typing_report.map { _meta, _tsv -> _tsv },
+        NEXTCLADE.out.nextclade_report,
+        params.flu_db_ver
+    )
     // //
     // Collate and save software versions
     //

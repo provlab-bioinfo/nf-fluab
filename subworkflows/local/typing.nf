@@ -1,7 +1,7 @@
 include {
     BLAST_BLASTN ;
     PROCESS_BLAST
-} from '../../modules/local/blast.nf'
+} from '../../modules/local/blast/blastn'
 
 include {
     CSVTK_ADD_HEADER as CSVTK_ADD_HEADER_BLASTN
