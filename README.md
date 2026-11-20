@@ -1,10 +1,10 @@
-# nf-fluAB Pipeline
+# nf-fluab Pipeline
 
 > 🕒 **Last updated:** July 14, 2026
 
 ## Introduction
 
-**nf-fluAB** is a bioinformatics pipeline for the assembly, typing, and lineage assignment of influenza NGS data generated from Illumina or Nanopore platforms. Built with **Nextflow**,it enables portable and scalable execution across a range of computing environments. The use of Docker and Singularity containers ensures easy installation and highly reproducible results.
+**nf-fluab** is a bioinformatics pipeline for the assembly, typing, and lineage assignment of influenza NGS data generated from Illumina or Nanopore platforms. Built with **Nextflow**,it enables portable and scalable execution across a range of computing environments. The use of Docker and Singularity containers ensures easy installation and highly reproducible results.
 
 
 ## Pipeline Summary
@@ -79,11 +79,11 @@ sample3,NA,NA,sample3.fastq.gz
 Now, you can run the pipeline using:
 
 ```bash
-nextflow run xiaoli-dong/nf-fluAB --input samplesheet.csv --outdir <OUTDIR> -profile <docker/singularity/podman/shifter/charliecloud/conda/institute> --platform <illumina or nanopore>
+nextflow run xiaoli-dong/nf-fluab --input samplesheet.csv --outdir <OUTDIR> -profile <docker/singularity/podman/shifter/charliecloud/conda/institute> --platform <illumina or nanopore>
 ```
 ## Credits
 
-- **nf-fluAB** was written by **Xiaoli Dong**.
+- **nf-fluab** was written by **Xiaoli Dong**.
 - The Illumina part of the pipeline was primarily based on **Dr. Matthew Croxen**'s **flu pipeline**.
 - Extensive support was provided by the **ProvLab Research Team** in Calgary for generating sequencing data and conducting the pipeline testing:
   >- **Linda Lee**
