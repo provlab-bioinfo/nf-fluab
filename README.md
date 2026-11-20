@@ -57,7 +57,6 @@ flowchart TD
     
     %% Software versions
     M((Software<br/>Versions)) --> N([versions.yml]):::report
-
 * QC
   * Illumina QC ([fastp](https://github.com/OpenGene/fastp) or[BBDuk](https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/bbduk-guide/) -> [seqkit stats](https://bioinf.shenwei.me/seqkit/usage/#stats))
   * Nanopore QC ([Porechop](https://github.com/rrwick/Porechop) -> [chopper](https://github.com/wdecoster/chopper) -> [seqkit stats](https://bioinf.shenwei.me/seqkit/usage/#stats))
