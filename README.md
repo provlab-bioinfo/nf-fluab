@@ -12,6 +12,51 @@ The pipeline takes a samplesheet and corresponding FASTQ files as input. It perf
 
 ![Pipeline Diagram](assets/nf-fluab-drawio.svg)
 
+## Pipeline Workflow
+
+```mermaid
+flowchart TD
+    %% Define styles
+    classDef input fill:#f3f4f6,stroke:#374151,stroke-width:2px,color:#111827;
+    classDef qc fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
+    classDef seek fill:#fef08a,stroke:#ca8a04,stroke-width:2px,color:#713f12;
+    classDef map fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef var fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d;
+    classDef con fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#4c1d95;
+    classDef report fill:#e5e7eb,stroke:#4b5563,stroke-width:2px,color:#1f2937;
+
+    %% Input
+    A([Samplesheet & FASTQ]):::input --> B[READ_QC]:::qc
+    
+    %% QC details
+    B --> |ch_qcreads| C[SEEK_REFERENCES]:::seek
+    B --> |ch_qcreads| D[MAPPING]:::map
+    
+    %% Flow
+    C --> |ref_fasta_fai| D
+    C --> |ref_fasta_fai| E[VARIANTS]:::var
+    D --> |bam_bai| E
+    
+    E --> |fasta_vcf| F[CONSENSUS]:::con
+    D --> |low_bed, coverage| F
+    
+    F --> |all_consensus| G[CONSENSUS_FILTER<br/>Remove empty contigs]:::con
+    
+    %% Final parallel steps
+    G --> H[VADR_SCAN<br/>VADR]:::con
+    G --> I[TYPING<br/>BLASTn]:::con
+    G --> J[NEXTCLADE<br/>Nextclade]:::con
+    
+    %% Master Report
+    F --> |all_consensus, report| K[CREATE_MASTER_REPORT]:::report
+    B --> |read_qc_report| K
+    I --> |typing_report| K
+    J --> |nextclade_report| K
+    
+    K --> L([Master Summary Report]):::report
+    
+    %% Software versions
+    M((Software<br/>Versions)) --> N([versions.yml]):::report
 
 * QC
   * Illumina QC ([fastp](https://github.com/OpenGene/fastp) or[BBDuk](https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/bbduk-guide/) -> [seqkit stats](https://bioinf.shenwei.me/seqkit/usage/#stats))
