@@ -15,19 +15,45 @@
             },
             "fastq_1": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^(NA|\\S+\\.f(ast)?q\\.gz)$",
+                "errorMessage": "FastQ file for reads 1 must be 'NA' or have extension '.fq.gz' or '.fastq.gz'"
             },
             "fastq_2": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "pattern": "^(NA|\\S+\\.f(ast)?q\\.gz)$",
+                "errorMessage": "FastQ file for reads 2 must be 'NA' or have extension '.fq.gz' or '.fastq.gz'"
+            },
+            "long_fastq": {
+                "type": "string",
+                "pattern": "^(NA|\\S+\\.f(ast)?q\\.gz)$",
+                "errorMessage": "Long-read FastQ must be 'NA' or have extension '.fq.gz' or '.fastq.gz'"
             }
         },
-        "required": ["sample", "fastq_1"]
+        "required": [
+            "sample",
+            "fastq_1",
+            "fastq_2",
+            "long_fastq"
+        ],
+        "anyOf": [
+            {
+                "properties": {
+                    "fastq_1": {
+                        "not": {
+                            "const": "NA"
+                        }
+                    }
+                }
+            },
+            {
+                "properties": {
+                    "long_fastq": {
+                        "not": {
+                            "const": "NA"
+                        }
+                    }
+                }
+            }
+        ]
     }
 }

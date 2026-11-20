@@ -8,3 +8,9 @@ testing*
 *.pyc
 null/
 .lineage/
+tests/test_data/*
+test/*
+notes.txt
+conf_bk
+assets/clair3_models/*
+resources/*
