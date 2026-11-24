@@ -5,7 +5,7 @@ aggregate_nextclade.py
 
 Merge Nextclade TSV results for influenza HA (segment 4) and
 NA (segment 6) into two long-format tables plus one wide
-per-(sample, subtype) Nextclade summary table.
+per-(sample, platform, subtype) Nextclade summary table.
 
 Input:
     Directory containing Nextclade TSV output files:
@@ -21,90 +21,61 @@ are included.
 
 Outputs:
     <prefix>-nextclade_ha.long.tsv
-        segment 4 rows, union header of HA files.
+        Segment 4 rows, union header of HA files.
+        Includes sample and platform columns.
 
     <prefix>-nextclade_na.long.tsv
-        segment 6 rows, union header of NA files.
+        Segment 6 rows, union header of NA files.
+        Includes sample and platform columns.
 
     <prefix>-nextclade_ha_na.short.tsv
-        one row per (sample, subtype), wide HA/NA summary.
+        One row per (sample, platform, subtype), wide HA/NA summary.
 
-    A gene with no input files produces no long-format output file.
-    The summary file is written if at least one HA or NA row
-    survives filtering.
+Long-format output (per gene):
+    - One row per surviving input row.
+    - Header is source_file, dataset, sample, platform,
+      followed by the union of all columns across that gene's
+      input files.
+    - sample and platform are parsed from seqName.
+    - A file that lacks a given column contributes "NA" for
+      that column in its rows.
+    - Multiple hits per sample are preserved.
+    - No deduplication or collapsing across files.
 
-Long-format output (per gene): one row per surviving input row.
+Summary output:
+    One row per (sample, platform, subtype).
 
-    - The header is the union of all columns across that gene's
-      input files, prefixed by source_file and dataset.
-    - A file that lacks a given column contributes "NA" for that
-      column in its rows.
-    - Multiple hits per sample are preserved: a seqName can
-      appear in more than one row.
-    - No deduplication, no collapsing across files.
-
-Per-(sample, subtype) Nextclade summary output: one row per
-(sample, subtype) pair. The output columns are fixed:
-
-    sample
-    ref_subtype
-    seg4_id
-    HA_clade
-    HA_proposedSubclade
-    HA_subclade
-    HA_nextclade_qc.overallStatus
-    seg6_id
-    NA_clade
-    NA_proposedSubclade
-    NA_subclade
-    NA_nextclade_qc.overallStatus
-
-    sample and ref_subtype are parsed from seqName. Expected
-    formats:
-
-        <sample>-seg<4|6>|<subtype>
-        <sample>-seg<4|6>|<subtype> ref=<ref_accession>|<ref_subtype>
+    Expected seqName format:
+        <sample>-seg<4|6>|<platform>|<subtype>
 
     Examples:
+        flua_i_1-seg4|illumina|H3N2
+        flua_i_1-seg6|illumina|H3N2
+        flua_i_1-seg4|nanopore|H1N1
 
-        flua_i_1-seg4|H3N2
-        flua_i_3_co-seg4|H1N1 ref=PV063155|H1N1
+    Each summary row carries the HA and NA hits matching
+    that sample, platform, and subtype.
 
-    Each summary row carries the HA hit (if any) and the NA hit
-    (if any) that match that (sample, subtype). seg4_id / seg6_id
-    record the full seqName for that gene on that row, so each
-    row points back to the source hits.
+    Co-infections:
+        A sample evaluated against more than one subtype
+        produces one row per subtype, separately for each
+        platform.
 
-    Co-infections (summary only):
-        A sample evaluated against more than one subtype (e.g.
-        H1N1 and H3N2 reference datasets) produces one summary
-        row per (sample, subtype). Each row carries the HA/NA
-        hits that matched that subtype.
+    Missing values:
+        Missing gene hits or empty input fields are written
+        as "NA".
 
-    Missing values (summary only):
-        If a (sample, subtype) has no HA hit, seg4_id and all
-        HA_* columns are written as "NA". Same for NA. If a
-        field is empty in the input, it is written as "NA".
-
-    Collapsing (summary only):
+    Collapsing:
         Multiple Nextclade results for the same seqName are
-        collapsed when they have the same classification. The
-        classification key is (clade, proposedSubclade, subclade).
-        This handles cases where the same sequence was evaluated
-        against multiple reference datasets of the same subtype.
+        collapsed when they have the same classification.
         The first-seen classification wins.
 
-Filtering (applies to both output formats):
+Filtering:
     - Rows with a non-empty "errors" field are excluded.
-    - Rows with qc.overallStatus == "bad" (case-insensitive,
-      whitespace-tolerant) are excluded.
-    - As a safety net, the summary also refuses to write a
-      "bad" QC value: if one somehow survives, that gene's
-      columns on the affected row are written as "NA" and a
-      warning is printed.
-    - No other QC filtering. qc.overallStatus is carried as a
-      column in both outputs.
+    - Rows with qc.overallStatus == "bad" are excluded.
+    - No other QC filtering.
 """
+
 
 import argparse
 import csv
@@ -125,29 +96,32 @@ GENE_NAMES = {
 }
 
 
-# Gene -> the long-format filename template, relative to the
-# user's prefix. "{prefix}" is substituted.
 LONG_FILENAME_TEMPLATE = {
     "HA": "{prefix}-nextclade_ha.long.tsv",
     "NA": "{prefix}-nextclade_na.long.tsv",
 }
 
 
-# Filename template for the wide, one-row-per-(sample, subtype)
-# summary.
 SUMMARY_FILENAME_TEMPLATE = (
     "{prefix}-nextclade_ha_na.short.tsv"
 )
 
 
+# Explicit columns added to both long-format outputs.
+# sample and platform are extracted from seqName.
+""" PREFIX_COLUMNS = [
+    "source_file",
+    "dataset",
+    "sample",
+    "platform",
+] """
 PREFIX_COLUMNS = [
+    "sample",
+    "platform",
     "source_file",
     "dataset",
 ]
 
-
-# Columns that define "same classification" for summary
-# collapsing.
 CLASSIFICATION_COLUMNS = [
     "clade",
     "proposedSubclade",
@@ -155,26 +129,24 @@ CLASSIFICATION_COLUMNS = [
 ]
 
 
-# The QC column name and the values treated as bad.
 QC_COLUMN = "qc.overallStatus"
 BAD_QC_VALUE = "bad"
 
 
-# seqName -> sample / segment / subtype
+# Expected seqName:
+#   <sample>-seg<segment>|<platform>|<subtype>
 #
-# Accepts both of these forms:
-#   flua_i_1-seg4|H3N2
-#   flua_i_3_co-seg4|H1N1 ref=PV063155|H1N1
+# Example:
+#   sample8-seg4|nanopore|H1N1
 #
-# The trailing " ref=...|..." part is optional and ignored.
-# The subtype group stops at whitespace or "|", so it captures
-# just the query subtype ("H1N1", "H3N2", "Victoria", ...).
+# The optional trailing text is ignored.
 SEQNAME_RE = re.compile(
-    r"^(?P<sample>.+?)-seg(?P<seg>[0-9]+)\|(?P<subtype>[^|\s]+)"
+    r"^(?P<sample>.+?)-seg(?P<seg>[0-9]+)\|"
+    r"(?P<platform>[^|\s]+)\|"
+    r"(?P<subtype>[^|\s]+)"
 )
 
 
-# Per-gene mapping from long-format column -> summary column.
 SUMMARY_GENE_COLUMNS = {
     "HA": {
         "clade": "HA_clade",
@@ -191,9 +163,9 @@ SUMMARY_GENE_COLUMNS = {
 }
 
 
-# Fixed summary output header. Do not reorder.
 SUMMARY_COLUMNS = [
     "sample",
+    "platform",
     "ref_subtype",
     "seg4_id",
     "HA_clade",
@@ -208,11 +180,25 @@ SUMMARY_COLUMNS = [
 ]
 
 
+def parse_seqname(seqname):
+    """
+    Extract sample, segment, platform, and subtype from seqName.
+
+    Returns:
+        dict with sample, seg, platform, subtype
+        or None if seqName does not match the expected format.
+    """
+
+    match = SEQNAME_RE.match(seqname or "")
+
+    if not match:
+        return None
+
+    return match.groupdict()
+
+
 def is_bad_qc(value):
-    """
-    Return True if the value is a "bad" QC status, ignoring case
-    and surrounding whitespace.
-    """
+    """Return True if QC status is bad, ignoring case and whitespace."""
 
     return (value or "").strip().lower() == BAD_QC_VALUE
 
@@ -239,13 +225,7 @@ def get_dataset_name(filename):
 
 
 def get_gene_from_dataset(dataset):
-    """
-    Determine influenza gene from the Nextclade dataset name.
-
-    Example:
-        nextstrain/flu/h3n2/ha/CY163680
-        -> HA
-    """
+    """Determine influenza gene from the Nextclade dataset name."""
 
     parts = dataset.lower().split("/")
 
@@ -257,17 +237,18 @@ def get_gene_from_dataset(dataset):
 
 
 def read_headers(filename):
-    """
-    Return the list of fieldnames from a Nextclade TSV file.
-    Returns an empty list on read failure.
-    """
+    """Return fieldnames from a Nextclade TSV file."""
 
     try:
         with open(filename, "r", newline="") as in_fh:
             reader = csv.reader(in_fh, delimiter="\t")
             header = next(reader, None)
+
     except OSError as exc:
-        print(f"WARNING: Cannot read {filename}: {exc}", flush=True)
+        print(
+            f"WARNING: Cannot read {filename}: {exc}",
+            flush=True,
+        )
         return []
 
     return header or []
@@ -275,11 +256,10 @@ def read_headers(filename):
 
 def collect_union_columns(files):
     """
-    Return the union of data columns across the given files,
+    Return the union of data columns across files,
     preserving first-seen order.
 
-    Columns that collide with PREFIX_COLUMNS are dropped so the
-    output header has no duplicates.
+    Columns that collide with PREFIX_COLUMNS are excluded.
     """
 
     prefix_set = set(PREFIX_COLUMNS)
@@ -290,10 +270,13 @@ def collect_union_columns(files):
         for field in read_headers(filename):
             if not field:
                 continue
+
             if field in prefix_set:
                 continue
+
             if field in seen:
                 continue
+
             seen.add(field)
             columns.append(field)
 
@@ -301,10 +284,7 @@ def collect_union_columns(files):
 
 
 def classification_key(row):
-    """
-    Return the tuple that defines "same classification" for a row.
-    Used only by the per-(sample, subtype) summary.
-    """
+    """Return the classification tuple used for summary collapsing."""
 
     return tuple(
         (row.get(column) or "").strip()
@@ -316,11 +296,9 @@ def aggregate_gene(files, union_columns):
     """
     Build one output row per surviving input row for a single gene.
 
-    No collapsing happens here: multiple hits for the same seqName
-    are preserved in the long-format tables.
+    sample and platform are extracted from seqName.
 
-    Returns:
-        list of dicts ready for csv.DictWriter.
+    No collapsing happens here. Multiple hits are preserved.
     """
 
     rows = []
@@ -329,6 +307,7 @@ def aggregate_gene(files, union_columns):
     kept_rows = 0
     skipped_errors = 0
     skipped_bad_qc = 0
+    skipped_unparseable = 0
 
     for filename, _gene in files:
         dataset = get_dataset_name(filename)
@@ -345,39 +324,61 @@ def aggregate_gene(files, union_columns):
                 )
                 continue
 
+            if "seqName" not in reader.fieldnames:
+                print(
+                    f"WARNING: No 'seqName' column found: "
+                    f"{filename}; skipping file",
+                    flush=True,
+                )
+                continue
+
             if "errors" not in reader.fieldnames:
                 print(
-                    f"WARNING: No 'errors' column found: {filename}; "
-                    f"error filtering disabled for this file",
+                    f"WARNING: No 'errors' column found: "
+                    f"{filename}; error filtering disabled",
                     flush=True,
                 )
 
             if QC_COLUMN not in reader.fieldnames:
                 print(
                     f"WARNING: No '{QC_COLUMN}' column found: "
-                    f"{filename}; bad-QC filtering disabled for this file",
+                    f"{filename}; bad-QC filtering disabled",
                     flush=True,
                 )
 
             for row in reader:
                 total_rows += 1
 
-                # 1. Drop rows flagged with Nextclade errors.
+                # 1. Exclude rows with Nextclade errors.
                 errors = (row.get("errors") or "").strip()
+
                 if errors:
                     skipped_errors += 1
                     continue
 
-                # 2. Drop rows with bad overall QC.
-                #    Case-insensitive, whitespace-tolerant.
-                qc_status = row.get(QC_COLUMN)
-                if is_bad_qc(qc_status):
+                # 2. Exclude rows with bad overall QC.
+                if is_bad_qc(row.get(QC_COLUMN)):
                     skipped_bad_qc += 1
+                    continue
+
+                # 3. Extract sample and platform from seqName.
+                seqname = row.get("seqName", "")
+                parsed = parse_seqname(seqname)
+
+                if parsed is None:
+                    skipped_unparseable += 1
+                    print(
+                        f"WARNING: Cannot parse seqName: "
+                        f"{seqname!r} in {filename}",
+                        flush=True,
+                    )
                     continue
 
                 out = {
                     "source_file": os.path.basename(filename),
                     "dataset": dataset,
+                    "sample": parsed["sample"],
+                    "platform": parsed["platform"],
                 }
 
                 for column in union_columns:
@@ -390,7 +391,8 @@ def aggregate_gene(files, union_columns):
     print(
         f"  rows read={total_rows}, kept={kept_rows}, "
         f"with errors={skipped_errors}, "
-        f"bad QC={skipped_bad_qc}",
+        f"bad QC={skipped_bad_qc}, "
+        f"unparseable seqName={skipped_unparseable}",
         flush=True,
     )
 
@@ -399,10 +401,10 @@ def aggregate_gene(files, union_columns):
 
 def write_gene(rows, union_columns, output_file):
     """
-    Write one gene's long-format table:
-    PREFIX_COLUMNS + union_columns.
+    Write one gene's long-format table.
 
-    Every surviving input row is written; nothing is collapsed.
+    Column order:
+        source_file, dataset, sample, platform, union columns
     """
 
     output_dir = os.path.dirname(output_file)
@@ -412,13 +414,15 @@ def write_gene(rows, union_columns, output_file):
 
     fieldnames = PREFIX_COLUMNS + union_columns
 
-    def sort_key(row):
-        return (
+    rows_sorted = sorted(
+        rows,
+        key=lambda row: (
+            row["sample"],
+            row["platform"],
             row["source_file"],
             row.get("seqName", ""),
-        )
-
-    rows_sorted = sorted(rows, key=sort_key)
+        ),
+    )
 
     with open(output_file, "w", newline="") as out_fh:
         writer = csv.DictWriter(
@@ -440,42 +444,37 @@ def write_gene(rows, union_columns, output_file):
 
 def write_summary(ha_rows, na_rows, output_file):
     """
-    Build the wide, one-row-per-(sample, subtype) Nextclade
-    summary from the long rows.
+    Build the wide summary.
 
-    ha_rows / na_rows are the lists returned by aggregate_gene(),
-    so they already exclude rows with Nextclade errors and rows
-    with qc.overallStatus == "bad".
+    One row per (sample, platform, subtype).
 
-    Safety net: if a row that survived aggregate_gene() still has
-    a "bad" QC value in any gene (e.g. because the column was
-    missing upstream and the value came from elsewhere, or a
-    future Nextclade version emits a different spelling), that
-    gene's contribution to the summary row is replaced with
-    "NA". The warning is printed so the upstream filter can be
-    corrected.
+    HA and NA hits are matched using all three fields:
+        sample, platform, subtype
 
-    Co-infections:
-        A sample evaluated against more than one subtype produces
-        one summary row per (sample, subtype). Each row carries
-        the HA/NA hits that matched that subtype; missing genes
-        are written as "NA".
-
-    Collapsing:
-        Multiple Nextclade results for the same seqName are
-        collapsed when they have the same classification
-        (clade, proposedSubclade, subclade). The first-seen
-        classification wins.
+    Multiple results for the same seqName and classification
+    are collapsed. The first-seen classification wins.
     """
 
-    # per-gene collapse: (seqName, classification) -> first row
-    collapsed = {"HA": {}, "NA": {}}
-    counts = {"HA": 0, "NA": 0}
+    # Per-gene collapse:
+    # (seqName, classification) -> first row
+    collapsed = {
+        "HA": {},
+        "NA": {},
+    }
+
+    counts = {
+        "HA": 0,
+        "NA": 0,
+    }
 
     for gene, rows in (("HA", ha_rows), ("NA", na_rows)):
         for row in rows:
             seqname = row.get("seqName", "")
-            key = (seqname, classification_key(row))
+
+            key = (
+                seqname,
+                classification_key(row),
+            )
 
             if key in collapsed[gene]:
                 counts[gene] += 1
@@ -486,12 +485,13 @@ def write_summary(ha_rows, na_rows, output_file):
         if counts[gene]:
             print(
                 f"  summary {gene}: collapsed "
-                f"{counts[gene]} duplicate (seqName, classification) "
-                f"row(s) from {len(rows)} long-format row(s)",
+                f"{counts[gene]} duplicate "
+                f"(seqName, classification) rows from "
+                f"{len(rows)} long-format rows",
                 flush=True,
             )
 
-    # collect hits per (sample, subtype), per gene
+    # Collect hits by (sample, platform, subtype).
     by_key = {}
     order = []
 
@@ -500,39 +500,44 @@ def write_summary(ha_rows, na_rows, output_file):
 
         for row in collapsed[gene].values():
             seqname = row.get("seqName", "")
-            match = SEQNAME_RE.match(seqname)
+            parsed = parse_seqname(seqname)
 
-            if not match:
+            if parsed is None:
                 print(
-                    f"WARNING: cannot parse seqName for summary: "
+                    f"WARNING: Cannot parse seqName for summary: "
                     f"{seqname!r}",
                     flush=True,
                 )
                 continue
 
-            if match.group("seg") != expected_seg:
+            if parsed["seg"] != expected_seg:
                 print(
-                    f"WARNING: segment mismatch for sample "
-                    f"{match.group('sample')}: got "
-                    f"seg{match.group('seg')} in {gene} file; "
-                    f"skipping {seqname!r}",
+                    f"WARNING: Segment mismatch for "
+                    f"{parsed['sample']}: got seg{parsed['seg']} "
+                    f"in {gene} file; skipping {seqname!r}",
                     flush=True,
                 )
                 continue
 
-            sample = match.group("sample")
-            subtype = match.group("subtype")
-            key = (sample, subtype)
+            sample = parsed["sample"]
+            platform = parsed["platform"]
+            subtype = parsed["subtype"]
+
+            key = (sample, platform, subtype)
 
             entry = by_key.get(key)
+
             if entry is None:
-                entry = {"HA": None, "NA": None}
+                entry = {
+                    "HA": None,
+                    "NA": None,
+                }
                 by_key[key] = entry
                 order.append(key)
 
             if entry[gene] is not None:
                 print(
-                    f"WARNING: multiple distinct {gene} "
+                    f"WARNING: Multiple distinct {gene} "
                     f"classifications for {key}; keeping first "
                     f"({entry[gene][0]!r} over {seqname!r})",
                     flush=True,
@@ -548,47 +553,58 @@ def write_summary(ha_rows, na_rows, output_file):
     rows_out = []
 
     for key in order:
-        sample, subtype = key
+        sample, platform, subtype = key
         entry = by_key[key]
 
         record = {
             "sample": sample,
+            "platform": platform,
             "ref_subtype": subtype,
         }
 
-        # Start every summary column at "NA"; fill in below.
+        # Initialize all summary columns to NA.
         for column in SUMMARY_COLUMNS:
             record.setdefault(column, "NA")
 
         for gene in ("HA", "NA"):
             hit = entry[gene]
+
             if hit is None:
                 continue
 
             seqname, row = hit
 
-            # Safety net: never promote a bad-QC hit into the
-            # summary. Skip just this gene; keep the other one.
+            # Safety net: do not promote a bad-QC hit.
             if is_bad_qc(row.get(QC_COLUMN)):
                 print(
-                    f"WARNING: surviving {gene} row for {key} "
-                    f"has bad QC ({seqname!r}); writing {gene} "
-                    f"columns as NA in the summary",
+                    f"WARNING: Surviving {gene} row for {key} "
+                    f"has bad QC ({seqname!r}); writing "
+                    f"{gene} columns as NA",
                     flush=True,
                 )
                 continue
 
-            id_column = "seg4_id" if gene == "HA" else "seg6_id"
+            id_column = (
+                "seg4_id" if gene == "HA" else "seg6_id"
+            )
+
             record[id_column] = seqname
 
-            for long_col, summary_col in SUMMARY_GENE_COLUMNS[gene].items():
-                record[summary_col] = (
-                    row.get(long_col, "NA") or "NA"
-                )
+            for long_col, summary_col in (
+                SUMMARY_GENE_COLUMNS[gene].items()
+            ):
+                value = row.get(long_col, "NA") or "NA"
+                record[summary_col] = value
 
         rows_out.append(record)
 
-    rows_out.sort(key=lambda r: (r["sample"], r["ref_subtype"]))
+    rows_out.sort(
+        key=lambda row: (
+            row["sample"],
+            row["platform"],
+            row["ref_subtype"],
+        )
+    )
 
     output_dir = os.path.dirname(output_file)
 
@@ -599,17 +615,16 @@ def write_summary(ha_rows, na_rows, output_file):
         writer = csv.DictWriter(
             out_fh,
             fieldnames=SUMMARY_COLUMNS,
-            delimiter="\t",   # change to "," for CSV output
+            delimiter="\t",
             extrasaction="ignore",
         )
 
         writer.writeheader()
-
-        for record in rows_out:
-            writer.writerow(record)
+        writer.writerows(rows_out)
 
     print(
-        f"Wrote {len(rows_out)} (sample, subtype) rows "
+        f"Wrote {len(rows_out)} "
+        f"(sample, platform, subtype) rows "
         f"-> {output_file}",
         flush=True,
     )
@@ -618,13 +633,10 @@ def write_summary(ha_rows, na_rows, output_file):
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Merge Nextclade HA and NA TSV results into two long "
-            "tables (segment 4 HA, segment 6 NA) plus one wide "
-            "per-(sample, subtype) Nextclade report. The long "
-            "tables keep every hit; the report has one row per "
-            "(sample, subtype) with HA and NA side by side. "
-            "Rows with a non-empty 'errors' field or a 'bad' "
-            "qc.overallStatus (case-insensitive) are excluded."
+            "Merge Nextclade HA and NA TSV results into two "
+            "long-format tables and one wide summary. "
+            "The summary has one row per "
+            "(sample, platform, subtype)."
         )
     )
 
@@ -640,7 +652,7 @@ def main():
         "--output-prefix",
         required=True,
         help=(
-            "Prefix for the output TSV files. Produces "
+            "Prefix for output TSV files. Produces "
             "<prefix>-nextclade_ha.long.tsv, "
             "<prefix>-nextclade_na.long.tsv, and "
             "<prefix>-nextclade_ha_na.short.tsv."
@@ -662,10 +674,16 @@ def main():
             f"{args.input_dir}"
         )
 
-    print(f"Found {len(input_files)} Nextclade TSV files.", flush=True)
+    print(
+        f"Found {len(input_files)} Nextclade TSV files.",
+        flush=True,
+    )
 
     # Classify files by gene; keep only HA and NA.
-    files_by_gene = {"HA": [], "NA": []}
+    files_by_gene = {
+        "HA": [],
+        "NA": [],
+    }
 
     for filename in input_files:
         dataset = get_dataset_name(filename)
@@ -691,7 +709,10 @@ def main():
 
     for gene, files in files_by_gene.items():
         if not files:
-            print(f"No {gene} input files; skipping output.", flush=True)
+            print(
+                f"No {gene} input files; skipping output.",
+                flush=True,
+            )
             continue
 
         union_columns = collect_union_columns(files)
@@ -701,7 +722,10 @@ def main():
             flush=True,
         )
 
-        rows = aggregate_gene(files, union_columns)
+        rows = aggregate_gene(
+            files,
+            union_columns,
+        )
 
         long_rows_by_gene[gene] = rows
 
@@ -709,7 +733,11 @@ def main():
             prefix=args.output_prefix,
         )
 
-        write_gene(rows, union_columns, output_file)
+        write_gene(
+            rows,
+            union_columns,
+            output_file,
+        )
 
         wrote_any = True
 
@@ -717,7 +745,8 @@ def main():
         raise SystemExit(
             "No HA or NA input files were found. Check that the "
             "filenames follow the expected "
-            "'all_consensus.nextclade.<dataset>.nextclade.tsv' pattern."
+            "'all_consensus.nextclade.<dataset>.nextclade.tsv' "
+            "pattern."
         )
 
     ha_rows = long_rows_by_gene.get("HA", [])
@@ -727,7 +756,12 @@ def main():
         summary_file = SUMMARY_FILENAME_TEMPLATE.format(
             prefix=args.output_prefix,
         )
-        write_summary(ha_rows, na_rows, summary_file)
+
+        write_summary(
+            ha_rows,
+            na_rows,
+            summary_file,
+        )
 
 
 if __name__ == "__main__":

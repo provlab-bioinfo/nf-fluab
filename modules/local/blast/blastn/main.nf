@@ -34,27 +34,38 @@ process BLAST_BLASTN {
     """
 
 }
+
 process PROCESS_BLAST {
-tag "${meta.id}"
+    tag "${meta.id}"
 
-input:
-tuple val(meta), path(blast_tsv)
+    input:
+    tuple val(meta), path(blast_tsv)
 
-output:
-tuple val(meta), path("*.subtype.tsv"), emit: processed
+    output:
+    tuple val(meta), path("*.subtype.tsv"), emit: processed
 
-script:
-def prefix = task.ext.prefix ?: "${meta.id}"
-def output = "${prefix}.subtype.tsv"
+    script:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    def output = "${prefix}.subtype.tsv"
 
-"""
-awk 'BEGIN {
-    OFS="\\t"
-    print "qseqid", "subtype", "pident", "qcov", "evalue"
+    """
+    awk 'BEGIN {
+        OFS="\\t"
+        print "sample", "platform", "seqid", "subtype", "pident", "qcov", "evalue"
+    }
+    NR > 1 {
+        split(\$1, q, "|")
+        split(q[1], s, "-seg")
+
+        if (length(q) == 3 && length(s) == 2) {
+            sample = s[1]
+            platform = q[2]
+            seqid = \$1
+            subtype = q[3]
+
+            print sample, platform, seqid, subtype, \$3, \$15, \$11
+        }
+    }' ${blast_tsv} > ${output}
+    """
 }
-NR > 1 {
-    split(\$2, a, "~~")
-    print \$1, a[3], \$3, \$15, \$11
-}' ${blast_tsv} > ${output}
-"""
-}
+

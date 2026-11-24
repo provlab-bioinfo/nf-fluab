@@ -49,7 +49,7 @@ process CONSENSUS_REHEADER {
     """
 }
 
-process CONSENSUS_FILTER{
+process CONSENSUS_FILTER_AND_RENAME{
     tag "$meta.id"
     label 'process_single'
 
@@ -77,6 +77,7 @@ process CONSENSUS_FILTER{
         $args \\
         -f ${fasta} \\
         -p ${meta.id} \\
+        --platform ${meta.platform} \\
         -e ${prefix}.excluded.fa \\
         -m ${prefix}.id_mapping.tsv \\
         -o ${prefix}.fa

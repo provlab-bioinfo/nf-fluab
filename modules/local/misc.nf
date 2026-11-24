@@ -94,8 +94,8 @@ process READ_QC_REPORT {
         --output read_qc_report.tsv
     """
 }
-process CREATE_MASTER_REPORT {
-    tag "master_report"
+process CREATE_SUMMARY_REPORT {
+    tag "summary_report"
     label 'process_low'
 
     conda "conda-forge::python=3.12"
@@ -106,31 +106,31 @@ process CREATE_MASTER_REPORT {
     input:
     path(all_consensus_fasta)
     path(all_consensus_report)
-    path(read_qc_report)
     path(typing_report)
     path(nextclade_report)
     val(flu_db_ver)
 
 
     output:
-    path("${prefix}.tsv"), emit: master_report
+    path("${prefix}.csv"), emit: summary_report
     tuple val("${task.process}"), val('python'), eval('python --version 2>&1 | sed -e "s/Python //g"'), emit: versions_python, topic: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
-    prefix = task.ext.prefix ?: "master"
+    prefix = task.ext.prefix ?: "summary_report"
 
     """
-    create_master_report.py \
-        -f ${all_consensus_fasta} \
+    create_summary_report.py \
+        --fasta ${all_consensus_fasta} \
         --consensus-report ${all_consensus_report} \
-        --read-qc-report ${read_qc_report} \
         --typing-report ${typing_report} \
         --nextclade-report ${nextclade_report} \
-        --flu-db-ver ${flu_db_ver} \
-        --nf-fluab-ver ${workflow.manifest.version} \
-        -o ${prefix}.tsv
+        --flu-db-ver '${flu_db_ver}' \
+        --nf-fluab-ver '${workflow.manifest.version}'  \
+        --output summary_report.csv
+
+
     """
 }

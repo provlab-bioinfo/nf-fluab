@@ -3,11 +3,11 @@ include {
 } from '../../modules/local/bcftools/bcftools.nf'
 include {
     CONSENSUS_REHEADER ;
-    CONSENSUS_FILTER ;
+    CONSENSUS_FILTER_AND_RENAME ;
     CONCAT_CONSENSUS;
     CONSENSUS_REPORT;
     CONCAT_CONSENSUS_REPORT;
-} from '../../modules/local/consensus_misc.nf'
+} from '../../modules/local/consensus.nf'
 
 include {
     SEQKIT_FX2TAB
@@ -33,9 +33,9 @@ workflow CONSENSUS {
 
     // CONSENSUS_REHEADER(BCF_CONSENSUS.out.fasta.join(per_sample_cov))
     // CONSENSUS_FILTER(CONSENSUS_REHEADER.out.fasta)
-    CONSENSUS_FILTER(BCF_CONSENSUS.out.fasta)
-    SEQKIT_FX2TAB( CONSENSUS_FILTER.out.filtered_fasta, 'txt')
-    CONSENSUS_REPORT(SEQKIT_FX2TAB.out.text.join(per_sample_cov).join(CONSENSUS_FILTER.out.id_mapping))
+    CONSENSUS_FILTER_AND_RENAME(BCF_CONSENSUS.out.fasta)
+    SEQKIT_FX2TAB( CONSENSUS_FILTER_AND_RENAME.out.filtered_fasta, 'txt')
+    CONSENSUS_REPORT(SEQKIT_FX2TAB.out.text.join(per_sample_cov).join(CONSENSUS_FILTER_AND_RENAME.out.id_mapping))
     CONSENSUS_REPORT.out.report
         .map { meta, report -> report }
         .collect()
@@ -47,7 +47,7 @@ workflow CONSENSUS {
 
 
     CONCAT_CONSENSUS(
-        CONSENSUS_FILTER.out.filtered_fasta
+        CONSENSUS_FILTER_AND_RENAME.out.filtered_fasta
             .map { _meta, _fasta -> _fasta }
             .collect()
     )

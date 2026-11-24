@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import argparse
 from collections import defaultdict
 import re
@@ -21,7 +20,7 @@ def readFasta(fasta):
                     seqid = full_header.split()[0]
                     id2desc[seqid] = full_header
                     id2seq[seqid] = ""
-            else:
+            elif seqid:
                 id2seq[seqid] += re.sub(r"\s+", "", line)
 
     return id2seq, id2desc
@@ -43,7 +42,7 @@ def filterSeq(id2seq, maxambigs):
             del id2seq[seqid]
             continue
 
-        total_atcg_count = len([b for b in seq if b in allowed_bases])
+        total_atcg_count = sum(b in allowed_bases for b in seq)
         ambig_count = seqlen - total_atcg_count
         ambig_ratio = ambig_count / seqlen
 
@@ -60,12 +59,20 @@ def filterSeq(id2seq, maxambigs):
     return id2seq, excluded_reasons
 
 
-def reheader(id2desc, seqPrefix):
-    """Build new consensus IDs of the form {prefix}-seg{N}|{SUBTYPE}."""
+def reheader(id2desc, seqPrefix, platform):
+    """
+    Build new consensus IDs of the form:
 
-    id2newid = defaultdict(str)
-    id2ref = defaultdict(str)
-    id2subtype = defaultdict(str)
+        {sample}-seg{N}|{platform}|{SUBTYPE}
+
+    Unmapped sequences are named:
+
+        {sample}-unmapped_{original_id}|{platform}
+    """
+
+    id2newid = {}
+    id2ref = {}
+    id2subtype = {}
 
     clean_prefix = seqPrefix.replace(".", "_")
 
@@ -92,13 +99,29 @@ def reheader(id2desc, seqPrefix):
     for seqid, (segid, subtype, ref) in parsed.items():
 
         if segid is None:
-            id2newid[seqid] = f"{clean_prefix}_unmapped_{seqid}"
+            newid = (
+                f"{clean_prefix}-unmapped_{seqid}|{platform}"
+            )
+
+            if newid in seen:
+                raise ValueError(
+                    "Duplicate consensus ID would be produced:\n"
+                    f"  id: {newid}\n"
+                    f"  sequences: {seen[newid]}, {seqid}"
+                )
+
+            seen[newid] = seqid
+
+            id2newid[seqid] = newid
             id2ref[seqid] = ref
             id2subtype[seqid] = ""
             continue
 
         tag = subtype if subtype else "unknown"
-        newid = f"{clean_prefix}-seg{segid}|{tag}"
+
+        newid = (
+            f"{clean_prefix}-seg{segid}|{platform}|{tag}"
+        )
 
         if newid in seen:
             raise ValueError(
@@ -142,7 +165,12 @@ def write_fasta(output, sorted_by_new_id, id2ref, id2subtype, id2seq):
             out_f.write(f"{id2seq[seqid]}\n")
 
 
-def write_excluded(excluded_fasta, id2desc, original_id2seq, excluded_reasons):
+def write_excluded(
+    excluded_fasta,
+    id2desc,
+    original_id2seq,
+    excluded_reasons,
+):
     with open(excluded_fasta, "w") as ex_f:
         for seqid in sorted(id2desc.keys()):
             if seqid in excluded_reasons:
@@ -155,8 +183,8 @@ def main():
     parser = argparse.ArgumentParser(
         description=(
             "Filter consensus sequences by ambiguity ratio, "
-            "rename the surviving FASTA headers as "
-            "{prefix}-seg{N}|{SUBTYPE}, and write a "
+            "rename surviving FASTA headers as "
+            "{sample}-seg{N}|{platform}|{SUBTYPE}, and write a "
             "new_id -> original_id mapping TSV. Excluded "
             "sequences are written with filter metrics."
         )
@@ -174,10 +202,16 @@ def main():
         "--prefix",
         required=True,
         help=(
-            "Prefix used for the renamed consensus IDs "
-            "(e.g. the sample ID) and for the default "
-            "excluded output filename"
+            "Sample ID used as the prefix for renamed consensus IDs "
+            "and for the default excluded output filename"
         ),
+    )
+
+    parser.add_argument(
+        "--platform",
+        required=True,
+        choices=["illumina", "nanopore"],
+        help="Sequencing platform",
     )
 
     parser.add_argument(
@@ -213,6 +247,9 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if not 0 <= args.maxambigs <= 1:
+        parser.error("--maxambigs must be between 0 and 1")
 
     mapping_out = (
         args.mapping_out
@@ -266,6 +303,7 @@ def main():
     id2newid, id2ref, id2subtype = reheader(
         surviving_desc,
         args.prefix,
+        args.platform,
     )
 
     # 5. Write the new_id -> original_id mapping TSV.

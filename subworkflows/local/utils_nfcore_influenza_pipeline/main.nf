@@ -91,13 +91,13 @@ workflow PIPELINE_INITIALISATION {
     // 2. Your updated channel logic
     // Create channel from input file provided through params.input
     channel.fromList(input_samples)
-        .map { meta, fastq_1, fastq_2, long_fastq ->
+        .map { meta, fastq_1, fastq_2, fastq_long ->
 
-            if (long_fastq != 'NA') {
+            if (fastq_long != 'NA') {
                 // Nanopore
-                def model_name = getClair3ModelName(long_fastq)
+                def model_name = getClair3ModelName(fastq_long)
 
-                return [[meta.id, 'nanopore'], meta + [single_end: true, platform: 'nanopore', model_name: model_name], [file(long_fastq)]]
+                return [[meta.id, 'nanopore'], meta + [single_end: true, platform: 'nanopore', model_name: model_name], [file(fastq_long)]]
             }
 
             if (fastq_2 != 'NA') {
@@ -327,7 +327,7 @@ def validatePairedEndInput(meta, fastq_1, fastq_2) {
 }
 def validateUniqueSamples(samples) {
 
-    def sample_ids = samples.collect { meta, fastq_1, fastq_2, long_fastq ->
+    def sample_ids = samples.collect { meta, fastq_1, fastq_2, fastq_long ->
         meta.id
     }
 
