@@ -11,7 +11,7 @@ The workflow separates samples by sequencing platform and runs the appropriate a
 
 ```mermaid
 flowchart TD
-    A[Input samplesheet] --> B{Platform}
+    A[Input<br>samplesheet] --> B{Platform}
     B --> C[Illumina]
     B --> D[ONT]
 
