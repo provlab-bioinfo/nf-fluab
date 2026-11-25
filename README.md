@@ -32,7 +32,7 @@ flowchart TD
 
     M --> N[VADR screening]
     M --> O[Segment typing]
-    M --> P[Nextclade lineage]
+    M --> P[Lineage]
 
     N --> Q[Summary reports]
     O --> Q
