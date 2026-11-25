@@ -68,32 +68,6 @@ process SEQKIT_STATS_SUMMARY {
         --output ${prefix}_summary.tsv
     """
 }
-process READ_QC_REPORT {
-    tag "read_qc_report"
-    label 'process_low'
-
-    conda "conda-forge::pandas=2.2.1"
-    container "${workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container
-        ? 'https://depot.galaxyproject.org/singularity/pandas:2.2.1'
-        : 'quay.io/biocontainers/pandas:2.2.1'}"
-
-    input:
-    path input_summary
-    path trimmed_summary
-    path dehosted_summary
-
-    output:
-    path "read_qc_report.tsv", emit: report
-
-    script:
-    """
-    read_qc_report.py \\
-        --input ${input_summary} \\
-        --trimmed ${trimmed_summary} \\
-        --dehosted ${dehosted_summary} \\
-        --output read_qc_report.tsv
-    """
-}
 process CREATE_SUMMARY_REPORT {
     tag "summary_report"
     label 'process_low'

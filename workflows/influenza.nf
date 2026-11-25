@@ -1,65 +1,109 @@
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
+IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
+ */
 include { paramsSummaryMap } from 'plugin/nf-schema'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_influenza_pipeline'
-include { SEEK_REFERENCES } from '../subworkflows/local/seek_references'
-include { MAPPING } from '../subworkflows/local/mapping'
-include { VARIANTS } from '../subworkflows/local/variants'
-include { CONSENSUS } from '../subworkflows/local/consensus'
+include {
+    SEEK_REFERENCES as SEEK_REFERENCES_SHORT ;
+    SEEK_REFERENCES as SEEK_REFERENCES_LONG
+} from '../subworkflows/local/seek_references'
+include { MAPPING_SHORT } from '../subworkflows/local/mapping_short'
+include { MAPPING_LONG } from '../subworkflows/local/mapping_long'
+include { VARIANTS_SHORT } from '../subworkflows/local/variants_short'
+include { VARIANTS_LONG } from '../subworkflows/local/variants_long'
+include {
+    CONSENSUS as CONSENSUS_SHORT ;
+    CONSENSUS as CONSENSUS_LONG
+} from '../subworkflows/local/consensus'
 include { TYPING } from '../subworkflows/local/typing'
 include { NEXTCLADE } from '../subworkflows/local/nextclade'
 include { CREATE_SUMMARY_REPORT } from '../modules/local/misc'
 include { VADR_SCAN } from '../modules/local/vadr.nf'
+
+include {
+    CONCAT_CONSENSUS ;
+    CONCAT_CONSENSUS_REPORT
+} from '../modules/local/consensus.nf'
+
 /*
 references:
-    https://www.htslib.org/workflow/wgs-call.html
-    https://genomemedicine.biomedcentral.com/articles/10.1186/s13073-020-00791-w
-*/
+https://www.htslib.org/workflow/wgs-call.html
+https://genomemedicine.biomedcentral.com/articles/10.1186/s13073-020-00791-w
+ */
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    RUN MAIN WORKFLOW
+RUN MAIN WORKFLOW
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
+ */
 
 workflow INFLUENZA {
     take:
     ch_samplesheet // channel: samplesheet read in from --input
-    outdir
 
     main:
-    ch_samplesheet.view { "SAMPLESHEET: $it" }
+    ch_samplesheet.view { "SAMPLESHEET: ${it}" }
 
+    /*
+     * Split by sequencing platform
+     */
 
-    SEEK_REFERENCES(
-        ch_samplesheet
+    ch_illumina = ch_samplesheet.filter { meta, _fastqs ->
+        meta.platform == 'illumina'
+    }
+
+    ch_nanopore = ch_samplesheet.filter { meta, _fastqs ->
+        meta.platform == 'nanopore'
+    }
+
+    SEEK_REFERENCES_SHORT(
+        ch_illumina
+    )
+    SEEK_REFERENCES_LONG(
+        ch_nanopore
     )
 
-    MAPPING(ch_samplesheet, SEEK_REFERENCES.out.ref_fasta_fai)
+    MAPPING_SHORT(ch_illumina, SEEK_REFERENCES_SHORT.out.ref_fasta_fai)
+    MAPPING_LONG(ch_nanopore, SEEK_REFERENCES_LONG.out.ref_fasta_fai)
 
-    VARIANTS(MAPPING.out.bam_bai, SEEK_REFERENCES.out.ref_fasta_fai)
-    CONSENSUS(
-        VARIANTS.out.fasta_vcf,
-        MAPPING.out.low_bed,
-        MAPPING.out.coverage,
+    VARIANTS_SHORT(MAPPING_SHORT.out.bam_bai, SEEK_REFERENCES_SHORT.out.ref_fasta_fai)
+    VARIANTS_LONG(MAPPING_LONG.out.bam_bai, SEEK_REFERENCES_LONG.out.ref_fasta_fai)
+
+    CONSENSUS_SHORT(
+        VARIANTS_SHORT.out.fasta_vcf,
+        MAPPING_SHORT.out.low_bed,
+        MAPPING_SHORT.out.coverage,
+    )
+    CONSENSUS_LONG(
+        VARIANTS_LONG.out.fasta_vcf,
+        MAPPING_LONG.out.low_bed,
+        MAPPING_LONG.out.coverage,
     )
 
-    ch_consensus_filtered = CONSENSUS.out.all_consensus
+    /*
+     * Combine Illumina and Nanopore consensus FASTAs
+     */
+
+    ch_combined_consensus = CONSENSUS_SHORT.out.all_consensus
+        .mix(CONSENSUS_LONG.out.all_consensus)
+        .collect()
+
+    CONCAT_CONSENSUS(ch_combined_consensus)
+
+
+    ch_consensus_filtered = CONCAT_CONSENSUS.out.fasta
         .filter { fasta -> fasta.size() > 0 && fasta.countFasta() > 0 }
         .map { fasta ->
             tuple(
-                [id: "all_consensus"],
+                [id: 'all_consensus'],
                 fasta,
             )
         }
 
-    VADR_SCAN(
-        ch_consensus_filtered
-    )
+    VADR_SCAN(ch_consensus_filtered)
 
     TYPING(ch_consensus_filtered)
 
@@ -68,12 +112,23 @@ workflow INFLUENZA {
         params.nextclade_datasets_csv,
     )
 
+
+    /*
+     * Combine Illumina and Nanopore consensus reports
+     */
+
+    ch_combined_consensus_report = CONSENSUS_SHORT.out.report
+        .mix(CONSENSUS_LONG.out.report)
+        .collect()
+
+    CONCAT_CONSENSUS_REPORT(ch_combined_consensus_report)
+
     CREATE_SUMMARY_REPORT(
-        CONSENSUS.out.all_consensus,
-        CONSENSUS.out.report,
+        CONCAT_CONSENSUS.out.fasta,
+        CONCAT_CONSENSUS_REPORT.out.report,
         TYPING.out.typing_report.map { _meta, _tsv -> _tsv },
         NEXTCLADE.out.nextclade_report,
-        params.flu_db_ver
+        params.flu_db_ver,
     )
 
     // //
@@ -99,7 +154,7 @@ workflow INFLUENZA {
     def ch_collated_versions = softwareVersionsToYAML(topic_versions.versions_file)
         .mix(topic_versions_string)
         .collectFile(
-            storeDir: "${outdir}/pipeline_info",
+            storeDir: "${params.outdir}/pipeline_info",
             name: 'influenza_software_' + 'versions.yml',
             sort: true,
             newLine: true,

@@ -22,6 +22,8 @@ include { UTILS_NEXTFLOW_PIPELINE } from '../../nf-core/utils_nextflow_pipeline'
     SUBWORKFLOW TO INITIALISE PIPELINE
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+
+
 workflow PIPELINE_INITIALISATION {
     take:
     version // boolean: Display version and exit
@@ -80,6 +82,10 @@ workflow PIPELINE_INITIALISATION {
         nextflow_cli_args
     )
 
+    //
+    // Custom validation for pipeline parameters
+    //
+
 
     def input_samples = samplesheetToList(
         input,
@@ -88,40 +94,47 @@ workflow PIPELINE_INITIALISATION {
 
     validateUniqueSamples(input_samples)
 
-    // 2. Your updated channel logic
-    // Create channel from input file provided through params.input
-    channel.fromList(input_samples)
-        .map { meta, fastq_1, fastq_2, fastq_long ->
+        channel.fromList(input_samples)
+        .flatMap { meta, fastq_1, fastq_2, fastq_long ->
+            def entries = []
 
-            if (fastq_long != 'NA') {
-                // Nanopore
+            // 1. Illumina entry (if fastq_1 is present)
+            if (fastq_1 != 'NA' && fastq_1 != null) {
+                if (fastq_2 != 'NA' && fastq_2 != null) {
+                    validatePairedEndInput(meta, fastq_1, fastq_2)
+                    entries << [
+                        [meta.id, 'illumina'],
+                        meta + [single_end: false, platform: 'illumina', model_name: 'ilmn'],
+                        [file(fastq_1), file(fastq_2)]
+                    ]
+                } else {
+                    entries << [
+                        [meta.id, 'illumina'],
+                        meta + [single_end: true, platform: 'illumina', model_name: 'ilmn'],
+                        [file(fastq_1)]
+                    ]
+                }
+            }
+
+            // 2. Nanopore entry (if fastq_long is present)
+            if (fastq_long != 'NA' && fastq_long != null) {
                 def model_name = getClair3ModelName(fastq_long)
-
-                return [[meta.id, 'nanopore'], meta + [single_end: true, platform: 'nanopore', model_name: model_name], [file(fastq_long)]]
+                entries << [
+                    [meta.id, 'nanopore'],
+                    meta + [single_end: true, platform: 'nanopore', model_name: model_name],
+                    [file(fastq_long)]
+                ]
             }
 
-            if (fastq_2 != 'NA') {
-                // Illumina paired-end
-                validatePairedEndInput(meta, fastq_1, fastq_2)
-                return [[meta.id, 'illumina'], meta + [single_end: false, platform: 'illumina', model_name: 'ilmn'], [file(fastq_1), file(fastq_2)]]
-            }
-
-            // Illumina single-end
-            return [[meta.id, 'illumina'], meta + [single_end: true, platform: 'illumina', model_name: 'ilmn'], [file(fastq_1)]]
+            return entries
         }
-        .groupTuple()
-        .map { samplesheet ->
-
-            def key = samplesheet[0]
-            def metas = samplesheet[1]
-            def fastqs = samplesheet[2]
-
-            validateInputSamplesheet(
-                [key, metas, fastqs]
-            )
-        }
-        .map { meta, fastqs ->
-            [meta, fastqs.flatten()]
+        .groupTuple(by: 0)
+        .map { key, metas, fastqs_lists ->
+            // flatMap emits multiple entries per sample, so groupTuple(by: 0)
+            // groups them by [meta.id, platform] correctly.
+            def meta = metas[0]
+            def fastqs = fastqs_lists.flatten()
+            [meta, fastqs]
         }
         .set { ch_samplesheet }
 
@@ -392,7 +405,6 @@ def validateInputSamplesheet(input) {
 
     return [metas[0], fastqs]
 }
-
 
 //
 // Generate methods description for MultiQC

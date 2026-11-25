@@ -1,6 +1,10 @@
 include { CLAIR3 } from '../../modules/local/clair3/main'
+include {
+    BCF_FILTER ;
+    BCFTOOLS_STATS
+} from "../../modules/local/bcftools/bcftools.nf"
 
-workflow VARIANTS_NANOPORE {
+workflow VARIANTS_LONG {
     take:
     bam_bai //[meta, bam, bai]
     fasta_fai // [meta, fasta, fai]
@@ -33,8 +37,16 @@ workflow VARIANTS_NANOPORE {
         }
 
     CLAIR3(ch_input.input_1, ch_input.fasta, ch_input.fai)
-    vcf = CLAIR3.out.vcf
 
+    BCF_FILTER(
+       CLAIR3.out.vcf.join(fasta_fai).map { meta, vcf, fasta, _fai ->
+            [meta, fasta, vcf]
+        },
+        params.major_allele_fraction,
+        params.minor_allele_fraction,
+    ) //output [meta, fasta, vcf]
+
+    BCFTOOLS_STATS(BCF_FILTER.out.vcf)
     emit:
-    vcf //[meta, vcf.gz]
+    fasta_vcf = BCF_FILTER.out.vcf
 }

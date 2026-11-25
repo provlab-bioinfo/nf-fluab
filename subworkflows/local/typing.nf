@@ -7,9 +7,7 @@ include {
     CSVTK_ADD_HEADER as CSVTK_ADD_HEADER_BLASTN
 } from '../../modules/local/csvtk/add-header/main'
 
-include {
-    CSVTK_CONCAT as CONCAT_TYPING
-} from '../../modules/nf-core/csvtk/concat/main'
+
 workflow TYPING {
     take:
     fasta // channel: [ meta, [contig] ]

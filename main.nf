@@ -49,8 +49,7 @@ workflow XIAOLIDONG_INFLUENZA {
     // WORKFLOW: Run pipeline
     //
     INFLUENZA (
-        samplesheet,
-        params.outdir,
+        samplesheet
     )
 }
 /*
