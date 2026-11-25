@@ -85,7 +85,7 @@ Each row represents one sample/library input. Use unique sample identifiers for 
 
 ## Reference data and databases
 
-The pipeline requires a local influenza A/B reference database and supporting resources.
+The pipeline requires the access to the influenza reference fasta sequence database and it msh file generated with mash sketch.
 
 ### Influenza reference database
 
@@ -102,49 +102,36 @@ fluab_reference_db/
 
 The reference database is built separately. See the repository's reference database building documentation for the database preparation workflow.
 
-### Supporting resources
-
-The pipeline also uses the following resources, configured through `nextflow.config` or an additional configuration file:
-
-| Resource | Purpose |
-|---|---|
-| Influenza A/B primer FASTA (`flu_primers`) | Primer-related sequence processing |
-| Influenza typing FASTA (`typing_db`) | Segment typing against the local typing database |
-| Nextclade datasets CSV (`nextclade_datasets_csv`) | Dataset configuration for influenza lineage assignment |
-| Clair3 model (`clair3_variant_model`) | ONT variant calling |
-
-Check that the configured paths are accessible from the environment where the pipeline runs.
-
 ## Quick start
 
 ### 1. Check the pipeline options
 
 ```bash
-nextflow run xiaoli-dong/nf-fluab -r 2.1.0 --help
+nextflow run xiaoli-dong/nf-fluab -r ffbc2bd --help
 ```
 
 ### 2. Run the pipeline
 
 ```bash
 nextflow run xiaoli-dong/nf-fluab \
-    -r 2.1.0 \
+    -r ffbc2bd \
     --input samplesheet.csv \
     --outdir results \
     --fluab_reference_db /path/to/fluab_reference_db \
-    -profile docker \
+    -profile singularity \
     -resume
 ```
 
-Replace `/path/to/fluab_reference_db` with the path to the prepared reference database. Change `-profile docker` to the execution profile available on your system.
+Replace `/path/to/fluab_reference_db` with the path to the prepared reference database. Change `-profile singularity` to the execution profile available on your system.
 
 For a local clone or development checkout, run the pipeline from the repository directory:
 
 ```bash
-nextflow run . \
+nextflow run path_to/main.nf \
     --input samplesheet.csv \
     --outdir results \
     --fluab_reference_db /path/to/fluab_reference_db \
-    -profile docker \
+    -profile singularity \
     -resume
 ```
 
