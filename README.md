@@ -173,10 +173,23 @@ The repository includes local test data under `tests/test_data/` and test config
 ## Credits
 
 - **nf-fluab** was written by **Xiaoli Dong**.
-- The reference selection components was based on **Dr. Matthew Croxen's** influenza pipeline.
+- The reference selection components was developed with reference to **Dr. Matthew Croxen's** influenza pipeline.
 - Extensive support was provided by the **ProvLab Research Team** in Calgary for generating sequencing data, conducting pipeline testing and validation:
 - **Dr. Tarah Lynch** and **Dr. Matthew Croxen** provided extensive technical input.
 
+## Citations
+
+The `nf-fluab` workflow was developed with reference to existing influenza sequencing workflows and uses the following bioinformatics tools:
+
+- CFIA-NCFAD/nf-flu: https://github.com/CFIA-NCFAD/nf-flu
+- INSaFLU: https://insaflu.insa.pt
+- Di Tommaso, P., et al. (2017). Nextflow enables reproducible computational workflows. *Nature Biotechnology*, 35, 316–319. https://doi.org/10.1038/nbt.3820
+- Li, H., & Durbin, R. (2009). Fast and accurate short read alignment with Burrows–Wheeler transform. *Bioinformatics*, 25(14), 1754–1760. https://doi.org/10.1093/bioinformatics/btp324
+- Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences. *Bioinformatics*, 34(18), 3094–3100. https://doi.org/10.1093/bioinformatics/bty191
+- Garrison, E., & Marth, G. (2012). Haplotype-based variant detection from short-read sequencing. https://arxiv.org/abs/1207.3907
+- Zheng, Z., et al. (2022). Symphonizing pileup and full-alignment for deep learning-based long-read variant calling. *Nature Computational Science*, 2, 797–803. https://doi.org/10.1038/s43588-022-00387-x
+- Aksamentov, I., et al. (2021). Nextclade: clade assignment, mutation calling and quality control for viral genomes. *Journal of Open Source Software*, 6(67), 3773. https://doi.org/10.21105/joss.03773
+  
 ## License
 
 This project is distributed under the MIT License. See [LICENSE](LICENSE).
