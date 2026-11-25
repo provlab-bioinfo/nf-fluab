@@ -11,30 +11,30 @@ The workflow separates samples by sequencing platform and runs the appropriate a
 
 ```mermaid
 flowchart TD
-    A[Samplesheet and FASTQ files] --> B{Sequencing platform}
-    B -->|Illumina| C[Illumina analysis]
-    B -->|Nanopore| D[ONT analysis]
+    A[Input samplesheet] --> B{Platform}
+    B --> C[Illumina]
+    B --> D[ONT]
 
-    C --> E[Reference selection with Mash]
-    D --> F[Reference selection with Mash]
+    C --> E[Reference selection]
+    D --> F[Reference selection]
 
-    E --> G[Read mapping and coverage]
-    F --> H[Read mapping and coverage]
+    E --> G[Mapping and coverage]
+    F --> H[Mapping and coverage]
 
-    G --> I[Variant calling and filtering]
-    H --> J[Variant calling and filtering]
+    G --> I[Variant calling]
+    H --> J[Variant calling]
 
-    I --> K[Consensus generation]
-    J --> L[Consensus generation]
+    I --> K[Consensus]
+    J --> L[Consensus]
 
-    K --> M[Combine consensus sequences and reports]
+    K --> M[Combine results]
     L --> M
 
-    M --> N[VADR sequence screening]
+    M --> N[VADR screening]
     M --> O[Segment typing]
-    M --> P[Nextclade lineage assignment]
+    M --> P[Nextclade lineage]
 
-    N --> Q[Analysis reports]
+    N --> Q[Summary reports]
     O --> Q
     P --> Q
 ```
