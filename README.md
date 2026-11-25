@@ -18,8 +18,8 @@ flowchart TD
     C --> E[Reference selection]
     D --> F[Reference selection]
 
-    E --> G[Mapping and coverage]
-    F --> H[Mapping and coverage]
+    E --> G[Read Mapping]
+    F --> H[Read Mapping]
 
     G --> I[Variant calling]
     H --> J[Variant calling]
