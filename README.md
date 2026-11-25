@@ -1,95 +1,204 @@
-# nf-fluab Pipeline
+# nf-fluab
 
-> 🕒 **Last updated:** July 14, 2026
+**nf-fluab** is a Nextflow pipeline for influenza A and B sequence analysis using Illumina and Oxford Nanopore Technologies (ONT) reads. It selects suitable reference sequences, maps reads, calls variants, generates consensus sequences, and performs segment typing and lineage assignment.
 
-## Introduction
+- **Pipeline version:** 2.1.0
+- **Minimum Nextflow version:** 25.10.4
 
-**nf-fluab** is a bioinformatics pipeline for the assembly, typing, and lineage assignment of influenza NGS data generated from Illumina or Nanopore platforms. Built with **Nextflow**,it enables portable and scalable execution across a range of computing environments. The use of Docker and Singularity containers ensures easy installation and highly reproducible results.
+## Workflow overview
 
+The workflow separates samples by sequencing platform and runs the appropriate analysis branch. Illumina and ONT samples can be included in the same samplesheet and processed in one pipeline run.
 
-## Pipeline Summary
-The pipeline takes a samplesheet and corresponding FASTQ files as input. It performs quality control (QC), identifies the closest publicly available reference(s), maps reads, calls variants, and generates a consensus contig for each segment. In cases of co-infection, multiple references are selected, and multiple consensus contigs are generated per segment. Segments are typed against a local database, and lineage is determined using Nextclade. At the end of the workflow, a comprehensive master summary report is generated for each sample, along with a consolidated analysis overview.
+```mermaid
+flowchart TD
+    A[Samplesheet and FASTQ files] --> B{Sequencing platform}
+    B -->|Illumina| C[Illumina analysis]
+    B -->|Nanopore| D[ONT analysis]
 
-![Pipeline Diagram](assets/nf-fluab-drawio.svg)
+    C --> E[Reference selection with Mash]
+    D --> F[Reference selection with Mash]
 
-* QC
-  * Illumina QC ([fastp](https://github.com/OpenGene/fastp) or[BBDuk](https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/bbduk-guide/) -> [seqkit stats](https://bioinf.shenwei.me/seqkit/usage/#stats))
-  * Nanopore QC ([Porechop](https://github.com/rrwick/Porechop) -> [chopper](https://github.com/wdecoster/chopper) -> [seqkit stats](https://bioinf.shenwei.me/seqkit/usage/#stats))
-* dehost ([hostile](https://github.com/bede/hostile) -> [seqkit stats](https://bioinf.shenwei.me/seqkit/usage/#stats))
-* seek references ([mash screen](https://github.com/marbl/Mash) -> filter mash screen output)
-* mapping and post-processing bam files
-  * Illumina mapping ([bwa](https://github.com/lh3/bwa) or [minimap2](https://github.com/lh3/minimap2) -> [samtools sort, index](https://www.htslib.org/doc/samtools.html) -> [picard MARKDUPLICATES](https://broadinstitute.github.io/picard/command-line-overview.html#MarkDuplicates) -> [samtools coverage](https://www.htslib.org/doc/samtools-coverage.html) -> bedtools genomecov)
-  * Nanopore mapping (minimap2 -> samtools sort, index -> samtools coverage -> samtools coverage -> [bedtools genomecov](https://bedtools.readthedocs.io/en/latest/content/overview.html) )
-* variant calling and post-processing vcf files
-  * Illumina data variant calling and post-processing ([freebayes](https://github.com/freebayes/freebayes) or [bcftools](https://samtools.github.io/bcftools/bcftools.html) -> bcftools sort, index -> bcftools norm -> bcftools filter (low quality, low depth) -> [snpeff](https://pcingola.github.io/SnpEff/) -> bcftools filter (frameshift)
-  * Nanopore data variant calling and post-processing (clair3 -> bcftools sort, index -> bcftools filter (low quality, low depth) -> snpeff -> bcftools filter (frameshift)
-* consensus calling (bcftools consensus -> SEQKIT fx2tab (stats) 
-* consensus typing (blastn against typing database)
-* Lineage determination (nextclade)
-* Summary report
+    E --> G[Read mapping and coverage]
+    F --> H[Read mapping and coverage]
 
-## Pipeline required reference sequences and databases
-1. [Influenza A and B  primer sequences](assets/flu-primers.fa): used for sequence data qulaity control process
-2. [flu typing database](assets/typing.fa): used for assembled segment typing 
-3. [nextcade dataset](https://github.com/nextstrain/nextclade_data/tree/master/data/nextstrain/flu): used for flu A&B lineage determination
-4. Influenza A and B reference databases: used for seeking the closest related public available sequences and used as the references in the assembly. [Go to reference database building guide](#build-influenza-a-and-b-reference-databases)
+    G --> I[Variant calling and filtering]
+    H --> J[Variant calling and filtering]
 
->### Build Influenza A and B reference databases
->The following procedure will build the influenza A and B reference database. Then by using hte reference fasta sequences generated, the script also generated the mash sketch database (msh file) and also the snpEff flu database
-> ```
- >#create conda environment for creating database
- >mamba create -n '$env_name' mash=2.3 snpeff=5.2 vadr=1.6.4 biopython=1.84 entrez-direct=22.4 diamond=2.1.11 cd-hit=4.8.1 -y
- >#running the script
- >path_to_bin_directory/make_db.sh -i path_to/sequences.fasta -o outdir -c number_of_cpus -g path_to/BVBRC_genome.csv -d output_database_prefix
- >
- >```
+    I --> K[Consensus generation]
+    J --> L[Consensus generation]
 
----
+    K --> M[Combine consensus sequences and reports]
+    L --> M
 
-## Quick Start
->If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline) with -profile test before running the workflow on actual data.
+    M --> N[VADR sequence screening]
+    M --> O[Segment typing]
+    M --> P[Nextclade lineage assignment]
 
-### Check pipeline command line options
-You can download the nf-fluab from github to local computer or you can directly run the pipeline from github remotely. The following is an example how to check the command line options without downloading the pipeline locally:
-
-```
-# running directly from github without downloading or cloning
-nextflow run xiaoli-dong/nf-fluab -r 7f72d6c --help
-```
-To run the analysis with your data, prepare a csv format samplesheet, which contains the sequenence information for each of your samples, as input. The samplesheet can contain only Illumina data or only nanopore data, it cannot not accept data from both Illumina and nanopore data in one analysis. See below for what the samplesheet looks like:
-
-Illumina data analysis sample sheet example
-```
-sample,fastq_1,fastq_2,long_fastq
-# comment lines will be ignoreed
-sample1,sample1_R1.fastq.gz,sample1_R2.fastq.gz,NA
-sample2,sample2_R1.fastq.gz,sample2_R2.fastq.gz,NA
-sample3,sample3_R1.fastq.gz,sample3_R2.fastq.gz,NA
+    N --> Q[Analysis reports]
+    O --> Q
+    P --> Q
 ```
 
-Nanopore data analysis sample sheet example
-```
-sample,fastq_1,fastq_2,long_fastq
-# comment lines will be ignoreed
-sample1,NA,NA,sample1.fastq.gz
-sample2,NA,NA,sample2.fastq.gz
-sample3,NA,NA,sample3.fastq.gz
+### Analysis steps
+
+1. **Reference selection** – Mash Screen compares reads against the local influenza reference database and selects suitable references for downstream analysis.
+2. **Read mapping and coverage** – Illumina reads are mapped using BWA or minimap2; ONT reads are mapped using minimap2. Alignment and coverage statistics are generated.
+3. **Variant calling and filtering** – Illumina variants are called using the configured FreeBayes or bcftools workflow. ONT variants are called using Clair3. Variants are normalized and filtered before consensus generation.
+4. **Consensus generation** – A consensus sequence is generated for each sample and influenza segment.
+5. **Sequence screening and typing** – Consensus sequences are screened with VADR and typed against the local influenza typing database.
+6. **Lineage assignment** – Nextclade assigns influenza lineage using the configured influenza datasets.
+7. **Reporting** – Consensus sequences and platform-specific reports are combined, and summary reports are generated.
+
+## Requirements
+
+- Nextflow **25.10.4 or later**
+- Java compatible with the installed Nextflow version
+- One supported execution environment:
+  - Docker
+  - Singularity or Apptainer
+  - Conda or Mamba
+  - Podman, Shifter, or Charliecloud
+- Access to the required reference data and databases described below
+
+The pipeline includes configuration profiles for the supported execution environments. Select the profile appropriate for your system.
+
+## Input samplesheet
+
+Provide a comma-separated CSV file with the following columns:
+
+| Column | Description |
+|---|---|
+| `sample` | Sample identifier |
+| `fastq_1` | Illumina read 1 FASTQ file |
+| `fastq_2` | Illumina read 2 FASTQ file; use `NA` for single-end Illumina data |
+| `fastq_long` | ONT FASTQ file |
+
+Use `NA` for columns that do not apply to a sample. The platform is determined from the populated read columns; there is no `--platform` command-line option.
+
+Example:
+
+```csv
+sample,fastq_1,fastq_2,fastq_long
+sample_illumina,reads_R1.fastq.gz,reads_R2.fastq.gz,NA
+sample_illumina_se,reads.fastq.gz,NA,NA
+sample_nanopore,NA,NA,reads.fastq.gz
 ```
 
-Now, you can run the pipeline using:
+Each row represents one sample/library input. Use unique sample identifiers for distinct inputs.
+
+## Reference data and databases
+
+The pipeline requires a local influenza A/B reference database and supporting resources.
+
+### Influenza reference database
+
+Set `--fluab_reference_db` to the reference database directory. The directory must contain:
+
+```text
+fluab_reference_db/
+├── reference.fasta
+└── reference.msh
+```
+
+- `reference.fasta` contains the reference sequences used for mapping.
+- `reference.msh` is the Mash sketch database used for reference selection.
+
+The reference database is built separately. See the repository's reference database building documentation for the database preparation workflow.
+
+### Supporting resources
+
+The pipeline also uses the following resources, configured through `nextflow.config` or an additional configuration file:
+
+| Resource | Purpose |
+|---|---|
+| Influenza A/B primer FASTA (`flu_primers`) | Primer-related sequence processing |
+| Influenza typing FASTA (`typing_db`) | Segment typing against the local typing database |
+| Nextclade datasets CSV (`nextclade_datasets_csv`) | Dataset configuration for influenza lineage assignment |
+| Clair3 model (`clair3_variant_model`) | ONT variant calling |
+
+Check that the configured paths are accessible from the environment where the pipeline runs.
+
+## Quick start
+
+### 1. Check the pipeline options
 
 ```bash
-nextflow run xiaoli-dong/nf-fluab --input samplesheet.csv --outdir <OUTDIR> -profile <docker/singularity/podman/shifter/charliecloud/conda/institute> --platform <illumina or nanopore>
+nextflow run xiaoli-dong/nf-fluab -r 2.1.0 --help
 ```
+
+### 2. Run the pipeline
+
+```bash
+nextflow run xiaoli-dong/nf-fluab \
+    -r 2.1.0 \
+    --input samplesheet.csv \
+    --outdir results \
+    --fluab_reference_db /path/to/fluab_reference_db \
+    -profile docker \
+    -resume
+```
+
+Replace `/path/to/fluab_reference_db` with the path to the prepared reference database. Change `-profile docker` to the execution profile available on your system.
+
+For a local clone or development checkout, run the pipeline from the repository directory:
+
+```bash
+nextflow run . \
+    --input samplesheet.csv \
+    --outdir results \
+    --fluab_reference_db /path/to/fluab_reference_db \
+    -profile docker \
+    -resume
+```
+
+### Useful options
+
+| Option | Description |
+|---|---|
+| `--input` | Input samplesheet CSV |
+| `--outdir` | Output directory |
+| `--fluab_reference_db` | Directory containing `reference.fasta` and `reference.msh` |
+| `-profile` | Execution environment/configuration profile |
+| `-resume` | Resume a previous run using cached process results |
+
+Use `--help` to see the available pipeline parameters and their current defaults.
+
+## Output structure
+
+The pipeline publishes results in the output directory. Main result directories include:
+
+```text
+results/
+├── consensus/       # Consensus FASTA sequences
+├── mapping/          # Alignment and coverage outputs
+├── nextclade/        # Nextclade results
+├── pipeline_info/    # Nextflow execution reports and metadata
+├── report/           # Consolidated analysis reports
+├── seekref/          # Mash results and selected references
+├── typing/           # Segment typing results
+├── vadr/             # VADR screening results
+└── variants/         # Variant-calling outputs
+```
+
+The exact files produced depend on the input data and the analysis branches executed. The `pipeline_info/` directory contains the Nextflow execution report, timeline, trace, and workflow DAG.
+
+## Testing
+
+The repository includes local test data under `tests/test_data/` and test configuration under `conf/`. See the test configuration and repository test definitions for the available test runs.
+
 ## Credits
 
 - **nf-fluab** was written by **Xiaoli Dong**.
-- The Illumina part of the pipeline was primarily based on **Dr. Matthew Croxen**'s **flu pipeline**.
-- Extensive support was provided by the **ProvLab Research Team** in Calgary for generating sequencing data and conducting the pipeline testing:
-  >- **Linda Lee**
-  >- **Johanna M Thayer**
-  >- **Fitsum Getachew**
-  >- **Petya Kolva**
-  >- **Anita Wong**
-  >- **Kanti Pabbaraju**
-- **Dr. Tarah Lynch**, and **Dr. Matthew Croxen** for extensive technical inputs.
+- The Illumina component was primarily based on **Dr. Matthew Croxen's** influenza pipeline.
+- Extensive support was provided by the **ProvLab Research Team** in Calgary for generating sequencing data and conducting pipeline testing:
+  - Linda Lee
+  - Johanna M. Thayer
+  - Fitsum Getachew
+  - Petya Kolva
+  - Anita Wong
+  - Kanti Pabbaraju
+- **Dr. Tarah Lynch** and **Dr. Matthew Croxen** provided extensive technical input.
+
+## License
+
+This project is distributed under the MIT License. See [LICENSE](LICENSE).
