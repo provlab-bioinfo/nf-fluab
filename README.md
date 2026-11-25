@@ -188,14 +188,8 @@ The repository includes local test data under `tests/test_data/` and test config
 ## Credits
 
 - **nf-fluab** was written by **Xiaoli Dong**.
-- The Illumina component was primarily based on **Dr. Matthew Croxen's** influenza pipeline.
-- Extensive support was provided by the **ProvLab Research Team** in Calgary for generating sequencing data and conducting pipeline testing:
-  - Linda Lee
-  - Johanna M. Thayer
-  - Fitsum Getachew
-  - Petya Kolva
-  - Anita Wong
-  - Kanti Pabbaraju
+- The reference selection components was based on **Dr. Matthew Croxen's** influenza pipeline.
+- Extensive support was provided by the **ProvLab Research Team** in Calgary for generating sequencing data, conducting pipeline testing and validation:
 - **Dr. Tarah Lynch** and **Dr. Matthew Croxen** provided extensive technical input.
 
 ## License
