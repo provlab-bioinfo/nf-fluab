@@ -52,14 +52,12 @@ flowchart TD
 ## Requirements
 
 - Nextflow **25.10.4 or later**
-- One supported execution environment:
+- The pipeline includes configuration profiles for the supported execution environments. Select the profile appropriate for your system. The supported execution environments are listed below:
   - Docker
   - Singularity or Apptainer
   - Conda or Mamba
   - Podman, Shifter, or Charliecloud
 - Access to the required reference data and databases described below
-
-The pipeline includes configuration profiles for the supported execution environments. Select the profile appropriate for your system.
 
 ## Input samplesheet
 
