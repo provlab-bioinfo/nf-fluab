@@ -11,7 +11,7 @@
 
 In our organization, read quality control is performed using [`nf-qcflow`](https://github.com/xiaoli-dong/qcflow). The quality-controlled reads produced by `nf-qcflow` are then used as input to `nf-fluab` for influenza A and B sequence analysis.
 
-`nf-fluab` does not perform the initial read quality control step.
+`nf-fluab` 2.x does not perform the initial read quality control step.
 
 ## Workflow overview
 
