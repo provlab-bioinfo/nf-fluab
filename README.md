@@ -44,9 +44,10 @@ flowchart TD
 2. **Read mapping and coverage** – Illumina reads are mapped using minibwa; ONT reads are mapped using minimap2. Alignment and coverage statistics are generated.
 3. **Variant calling and filtering** – Illumina variants are called using the configured FreeBayes. ONT variants are called using Clair3. Variants are normalized and filtered before consensus generation.
 4. **Consensus generation** – A consensus sequence is generated for each platform of the sample and influenza segment.
-5. **Sequence screening and typing** – Consensus sequences are annotated with VADR and typed against the local influenza typing database.
-6. **Lineage assignment** – Nextclade assigns influenza lineage using the configured influenza datasets.
-7. **Reporting** – Consensus sequences of platform-specific reports for each sample are combined, and summary reports are generated.
+5. **Blast typing** – Consensus sequences are typed against the local influenza typing database.
+6. **VADR validataion and annotationg** – Consensus sequences are annotated with VADR.
+7. **Lineage assignment** – Nextclade assigns influenza lineage using the configured influenza datasets.
+8. **Reporting** – Consensus sequences of platform-specific reports for each sample are combined, and summary reports are generated.
 
 ## Requirements
 
