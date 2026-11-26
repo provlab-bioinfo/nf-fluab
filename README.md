@@ -111,9 +111,11 @@ nextflow run xiaoli-dong/nf-fluab -r ffbc2bd --help
 
 ### 2. Run the pipeline
 
+To run the pipeline directly from GitHub:
+
 ```bash
 nextflow run xiaoli-dong/nf-fluab \
-    -r ffbc2bd \
+    -r <revision> \
     --input samplesheet.csv \
     --outdir results \
     --fluab_reference_db /path/to/fluab_reference_db \
@@ -121,12 +123,22 @@ nextflow run xiaoli-dong/nf-fluab \
     -resume
 ```
 
-Replace `/path/to/fluab_reference_db` with the path to the prepared reference database. Change `-profile singularity` to the execution profile available on your system.
+Replace `<revision>` with the desired pipeline version, branch name, or commit SHA. For example:
+
+- `2.0.0` – run a specific release
+- `main` – run the latest code on the main branch
+- `ffbc2bd` – run a specific commit (use the corresponding commit SHA)
+
+Replace `/path/to/fluab_reference_db` with the path to the prepared reference database. Change `-profile singularity` to an execution profile supported by your system.
 
 For a local clone or development checkout, run the pipeline from the repository directory:
 
 ```bash
-nextflow run path_to/main.nf \
+# Display pipeline help
+nextflow run path_to/nf-fluab/main.nf --help
+
+# Run the pipeline locally
+nextflow run path_to/nf-fluab/main.nf \
     --input samplesheet.csv \
     --outdir results \
     --fluab_reference_db /path/to/fluab_reference_db \
