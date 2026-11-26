@@ -5,6 +5,14 @@
 - **Pipeline version:** 2.1.0
 - **Minimum Nextflow version:** 25.10.4
 
+## Input data
+
+`nf-fluab` assumes that input reads have already undergone quality control and preprocessing.
+
+In our organization, read quality control is performed using [`nf-qcflow`](https://github.com/xiaoli-dong/qcflow). The quality-controlled reads produced by `nf-qcflow` are then used as input to `nf-fluab` for influenza A and B sequence analysis.
+
+`nf-fluab` does not perform the initial read quality control step.
+
 ## Workflow overview
 
 The workflow separates samples by sequencing platform and runs the appropriate analysis branch. Illumina and ONT samples can be included in the same samplesheet and processed in one pipeline run.
