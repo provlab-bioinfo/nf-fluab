@@ -103,13 +103,19 @@ The reference database is built and maintained separately from `nf-fluab`. For i
 
 ## Quick start
 
-To run the pipeline directly from GitHub:
+### Run directly from GitHub
+
+You can run `nf-fluab` directly from its GitHub repository without cloning it locally.
+
+First, display the available pipeline parameters:
 
 ```bash
-# Check the pipeline options
 nextflow run xiaoli-dong/nf-fluab -r <revision> --help
+```
 
-# Run the pipeline
+Then run the pipeline:
+
+```bash
 nextflow run xiaoli-dong/nf-fluab \
     -r <revision> \
     --input samplesheet.csv \
@@ -121,19 +127,21 @@ nextflow run xiaoli-dong/nf-fluab \
 
 Replace `<revision>` with the desired pipeline version, branch name, or commit SHA. For example:
 
-- `2.0.0` – run a specific release
-- `main` – run the latest code on the main branch
-- `ffbc2bd` – run a specific commit (use the corresponding commit SHA)
+- `2.0.0` – run a specific release.
+- `main` – run the latest code on the main branch.
+- `ffbc2bd` – run a specific commit using its commit SHA.
 
-Replace `/path/to/fluab_reference_db` with the path to the prepared reference database. Change `-profile singularity` to an execution profile supported by your system.
+Replace `/path/to/fluab_reference_db` with the path to the prepared influenza reference database. Change `-profile singularity` to an execution profile supported by your system.
 
-For a local clone or development checkout, run the pipeline from the repository directory:
+### Run from a local repository
+
+For a local clone or development checkout, specify the path to the pipeline's `main.nf` script:
 
 ```bash
 # Display pipeline help
 nextflow run path_to/nf-fluab/main.nf --help
 
-# Run the pipeline locally
+# Run the pipeline
 nextflow run path_to/nf-fluab/main.nf \
     --input samplesheet.csv \
     --outdir results \
@@ -146,13 +154,13 @@ nextflow run path_to/nf-fluab/main.nf \
 
 | Option | Description |
 |---|---|
-| `--input` | Input samplesheet CSV |
-| `--outdir` | Output directory |
-| `--fluab_reference_db` | Directory containing `reference.fasta` and `reference.msh` |
-| `-profile` | Execution environment/configuration profile |
-| `-resume` | Resume a previous run using cached process results |
+| `--input` | Path to the input samplesheet CSV. |
+| `--outdir` | Path to the output directory. |
+| `--fluab_reference_db` | Path to the influenza reference database directory containing `reference.fasta` and `reference.msh`. |
+| `-profile` | Specifies the execution profile(s), such as `singularity`, `apptainer`, `docker`, `conda`, or `slurm`. Multiple profiles can be combined, for example, `-profile singularity,slurm`. |
+| `-resume` | Resumes a previous run by reusing cached results from successfully completed processes where possible. |
 
-Use `--help` to see the available pipeline parameters and their current defaults.
+Use `--help` to view all available pipeline parameters, descriptions, and default values.
 
 ## Output structure
 
