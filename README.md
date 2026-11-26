@@ -6,7 +6,7 @@ Version 2.x assumes that reads have already undergone quality control and prepro
 
 ## Workflow overview
 
-The workflow separates samples by sequencing platform and runs the appropriate analysis branch. Illumina and ONT samples can be included in the same samplesheet and processed in one pipeline run.
+The pipeline automatically detects the sequencing platform from the input samplesheet and directs reads to the appropriate analysis branch. A sample can have both Illumina and Oxford Nanopore Technologies (ONT) data, which are processed separately through their respective analysis branches within the same pipeline run. Samples with data from either platform can also be included in the same analysis.
 
 ```mermaid
 flowchart TD
