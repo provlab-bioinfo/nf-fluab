@@ -82,7 +82,7 @@ Each row represents one sample/library input. Use unique sample identifiers for 
 
 ## Reference databases
 
-`nf-fluab` requires an influenza reference sequence database consisting of a FASTA file and its corresponding Mash sketch file.
+`nf-fluab` requires an influenza reference sequence database consisting of a curated FASTA file and its corresponding Mash sketch file.
 
 ### Influenza reference database
 
