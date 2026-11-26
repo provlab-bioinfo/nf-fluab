@@ -10,6 +10,7 @@ Version 2.x assumes that reads have already undergone quality control and prepro
 The pipeline automatically detects the sequencing platform from the input samplesheet and directs reads to the appropriate analysis branch. A sample can have both Illumina and Oxford Nanopore Technologies (ONT) data, which are processed separately through their respective analysis branches within the same pipeline run. Samples with data from either platform can also be included in the same analysis.
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 350}}}%%
 flowchart TD
     A[Input samplesheet] --> B{Platform}
     B --> C[Illumina]
