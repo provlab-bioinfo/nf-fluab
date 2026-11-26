@@ -2,9 +2,6 @@
 
 **nf-fluab** is a Nextflow pipeline for influenza A and B sequencing analysis. It takes quality-controlled reads as input and performs reference selection, read mapping, variant calling, consensus sequence generation, typing, lineage assignment, VADR annotation, and report generation. In our organization, reads are quality-controlled and preprocessed using [`nf-qcflow`](https://github.com/xiaoli-dong/qcflow) before being passed to `nf-fluab` for downstream influenza analysis.
 
-- **Pipeline version:** 2.1.0
-- **Minimum Nextflow version:** 25.10.4
-
 ## Input data
 
 `nf-fluab` assumes that input reads have already undergone quality control and preprocessing.
