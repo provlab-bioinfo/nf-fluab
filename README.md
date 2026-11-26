@@ -190,7 +190,7 @@ The repository includes local test data under `tests/test_data/` and test config
 
 - nf-fluab was written by Xiaoli Dong.
 - The reference selection components was developed with reference to Dr. Matthew Croxen's influenza pipeline.
-- Extensive support was provided by the ProvLab Research Team (kanti Pabbaraju, Kara Gill, Anita Wang) in Calgary for generating sequencing data, conducting pipeline testing and validation:
+- Extensive support was provided by the ProvLab Research Team (kanti Pabbaraju, Kara Gill, Anita Wang) in Calgary for generating sequencing data, conducting pipeline testing and validation.
 - Dr. Tarah Lynch and Dr. Matthew Croxen provided extensive technical input.
 
 ## Citations
