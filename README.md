@@ -82,22 +82,24 @@ Each row represents one sample/library input. Use unique sample identifiers for 
 
 ## Reference databases
 
-The pipeline requires the access to the influenza reference fasta sequence database and it msh file generated with mash sketch.
+`nf-fluab` requires an influenza reference sequence database consisting of a FASTA file and its corresponding Mash sketch file.
 
 ### Influenza reference database
 
-Set `--fluab_reference_db` to the reference database directory. The directory must contain:
+Set `--fluab_reference_db` to the path of the reference database directory. The directory name is user-defined, but it must contain both `reference.fasta` and `reference.msh` directly inside it.
+
+For example:
 
 ```text
-fluab_reference_db/
+my_flu_reference_db/
 ├── reference.fasta
 └── reference.msh
 ```
 
-- `reference.fasta` contains the reference sequences used to generate reference.msh.
-- `reference.msh` is the Mash sketch database used for reference selection.
+- `reference.fasta` contains the influenza reference sequences used for read mapping and downstream analysis.
+- `reference.msh` is the Mash sketch database generated from `reference.fasta` and used for reference selection.
 
-The reference database is built separately. See the repository's reference database building documentation for the database preparation workflow.
+The reference database is built and maintained separately from `nf-fluab`. For instructions on building the database, see the [fluab-reference-db repository](https://github.com/xiaoli-dong/fluab-reference-db).
 
 ## Quick start
 
