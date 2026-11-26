@@ -61,11 +61,8 @@ flowchart TD
 
 - Nextflow **25.10.4 or later**
 - The pipeline includes configuration profiles for the supported execution environments. Select the profile appropriate for your system. The supported execution environments are listed below:
-  - Docker
-  - Singularity or Apptainer
-  - Conda or Mamba
-  - Podman, Shifter, or Charliecloud
-- Access to the required reference data and databases described below
+  - Docker, Singularity, Apptainer, Conda or Mamba, Podman, Shifter, or Charliecloud. In our organization, we are using singularity
+- Access to the required reference data and databases described in the reference database section 
 
 ## Input samplesheet
 
@@ -91,7 +88,7 @@ sample_nanopore,NA,NA,reads.fastq.gz
 
 Each row represents one sample/library input. Use unique sample identifiers for distinct inputs.
 
-## Reference data and databases
+## Reference databases
 
 The pipeline requires the access to the influenza reference fasta sequence database and it msh file generated with mash sketch.
 
@@ -161,14 +158,14 @@ The pipeline publishes results in the output directory. Main result directories 
 
 ```text
 results/
-├── consensus/       # Consensus FASTA sequences
+├── consensus/        # Consensus FASTA sequences and stats
 ├── mapping/          # Alignment and coverage outputs
-├── nextclade/        # Nextclade results
+├── nextclade/        # Nextclade lineage results
 ├── pipeline_info/    # Nextflow execution reports and metadata
 ├── report/           # Consolidated analysis reports
 ├── seekref/          # Mash results and selected references
 ├── typing/           # Segment typing results
-├── vadr/             # VADR screening results
+├── vadr/             # Segment VADR annotation results
 └── variants/         # Variant-calling outputs
 ```
 
@@ -182,7 +179,7 @@ The repository includes local test data under `tests/test_data/` and test config
 
 - **nf-fluab** was written by **Xiaoli Dong**.
 - The reference selection components was developed with reference to **Dr. Matthew Croxen's** influenza pipeline.
-- Extensive support was provided by the **ProvLab Research Team** in Calgary for generating sequencing data, conducting pipeline testing and validation:
+- Extensive support was provided by the **ProvLab Research Team** (kanti Pabbaraju, Kara Gill, Anita Wang) in Calgary for generating sequencing data, conducting pipeline testing and validation:
 - **Dr. Tarah Lynch** and **Dr. Matthew Croxen** provided extensive technical input.
 
 ## Citations
