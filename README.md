@@ -1,3 +1,4 @@
+
 # nf-fluab
 
 **nf-fluab** is a Nextflow pipeline for influenza A and B sequencing analysis. It takes sequencing reads as input and performs reference selection, read mapping, variant calling, consensus sequence generation, typing, lineage assignment, VADR annotation, and report generation.
@@ -10,7 +11,7 @@ The pipeline automatically detects the sequencing platform from the input sample
 
 ```mermaid
 flowchart TD
-    A[Input<br>samplesheet] --> B{Platform}
+    A[Input samplesheet] --> B{Platform}
     B --> C[Illumina]
     B --> D[ONT]
 
@@ -31,7 +32,7 @@ flowchart TD
 
     M --> N[VADR screening]
     M --> O[Segment typing]
-    M --> P[Nextclade<br>Lineage]
+    M --> P[Nextclade Lineage]
 
     N --> Q[Summary reports]
     O --> Q
@@ -40,21 +41,21 @@ flowchart TD
 
 ### Analysis steps
 
-1. **Reference selection** – Mash Screen compares reads against the local influenza reference database and selects suitable references for downstream analysis.
-2. **Read mapping and coverage** – Illumina reads are mapped using minibwa; ONT reads are mapped using minimap2. Alignment and coverage statistics are generated.
-3. **Variant calling and filtering** – Illumina variants are called using the configured FreeBayes. ONT variants are called using Clair3. Variants are normalized and filtered before consensus generation.
-4. **Consensus generation** – A consensus sequence is generated for each platform of the sample and influenza segment.
-5. **Blast typing** – Consensus sequences are typed against the local influenza typing database.
-6. **VADR validataion and annotationg** – Consensus sequences are annotated with VADR.
-7. **Lineage assignment** – Nextclade assigns influenza lineage using the configured influenza datasets.
-8. **Reporting** – Consensus sequences of platform-specific reports for each sample are combined, and summary reports are generated.
+1. Reference selection – Mash Screen compares reads against the local influenza reference database and selects suitable references for downstream analysis.
+2. Read mapping and coverage – Illumina reads are mapped using minibwa; ONT reads are mapped using minimap2. Alignment and coverage statistics are generated.
+3. Variant calling and filtering – Illumina variants are called using the configured FreeBayes. ONT variants are called using Clair3. Variants are normalized and filtered before consensus generation.
+4. Consensus generation – A consensus sequence is generated for each platform of the sample and influenza segment.
+5. Blast typing – Consensus sequences are typed against the local influenza typing database.
+6. VADR validataion and annotationg – Consensus sequences are annotated with VADR.
+7. Lineage assignment – Nextclade assigns influenza lineage using the configured influenza datasets.
+8. Reporting – Consensus sequences of platform-specific reports for each sample are combined, and summary reports are generated.
 
 ## Requirements
 
-- Nextflow **25.10.4 or later**
+- Nextflow 25.10.4 or later
 - The pipeline includes configuration profiles for the supported execution environments. Select the profile appropriate for your system. The supported execution environments are listed below:
   - Docker, Singularity, Apptainer, Conda or Mamba, Podman, Shifter, or Charliecloud. In our organization, we are using singularity
-- Access to the required reference data and databases described in the reference database section 
+- Access to the required reference data and databases described in the reference database section
 
 ## Input samplesheet
 
@@ -99,7 +100,7 @@ my_flu_reference_db/
 - `reference.fasta` contains the influenza reference sequences used for read mapping and downstream analysis.
 - `reference.msh` is the Mash sketch database generated from `reference.fasta` and used for reference selection.
 
-The reference database is built and maintained separately from `nf-fluab`. For instructions on building the database, see the [fluab-reference-db repository](https://github.com/xiaoli-dong/fluab-reference-db).
+The reference database is built and maintained separately from `nf-fluab`. For instructions on building the database, see the [`fluab-reference-db` repository](https://github.com/xiaoli-dong/fluab-reference-db).
 
 ## Quick start
 
@@ -187,10 +188,10 @@ The repository includes local test data under `tests/test_data/` and test config
 
 ## Credits
 
-- **nf-fluab** was written by **Xiaoli Dong**.
-- The reference selection components was developed with reference to **Dr. Matthew Croxen's** influenza pipeline.
-- Extensive support was provided by the **ProvLab Research Team** (kanti Pabbaraju, Kara Gill, Anita Wang) in Calgary for generating sequencing data, conducting pipeline testing and validation:
-- **Dr. Tarah Lynch** and **Dr. Matthew Croxen** provided extensive technical input.
+- nf-fluab was written by Xiaoli Dong.
+- The reference selection components was developed with reference to Dr. Matthew Croxen's influenza pipeline.
+- Extensive support was provided by the ProvLab Research Team (kanti Pabbaraju, Kara Gill, Anita Wang) in Calgary for generating sequencing data, conducting pipeline testing and validation:
+- Dr. Tarah Lynch and Dr. Matthew Croxen provided extensive technical input.
 
 ## Citations
 
@@ -198,13 +199,13 @@ The `nf-fluab` workflow was developed with reference to existing influenza seque
 
 - CFIA-NCFAD/nf-flu: https://github.com/CFIA-NCFAD/nf-flu
 - INSaFLU: https://insaflu.insa.pt
-- Di Tommaso, P., et al. (2017). Nextflow enables reproducible computational workflows. *Nature Biotechnology*, 35, 316–319. https://doi.org/10.1038/nbt.3820
-- Li, H., & Durbin, R. (2009). Fast and accurate short read alignment with Burrows–Wheeler transform. *Bioinformatics*, 25(14), 1754–1760. https://doi.org/10.1093/bioinformatics/btp324
-- Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences. *Bioinformatics*, 34(18), 3094–3100. https://doi.org/10.1093/bioinformatics/bty191
+- Di Tommaso, P., et al. (2017). Nextflow enables reproducible computational workflows. Nature Biotechnology, 35, 316–319. https://doi.org/10.1038/nbt.3820
+- Li, H., & Durbin, R. (2009). Fast and accurate short read alignment with Burrows–Wheeler transform. Bioinformatics, 25(14), 1754–1760. https://doi.org/10.1093/bioinformatics/btp324
+- Li, H. (2018). Minimap2: pairwise alignment for nucleotide sequences. Bioinformatics, 34(18), 3094–3100. https://doi.org/10.1093/bioinformatics/bty191
 - Garrison, E., & Marth, G. (2012). Haplotype-based variant detection from short-read sequencing. https://arxiv.org/abs/1207.3907
-- Zheng, Z., et al. (2022). Symphonizing pileup and full-alignment for deep learning-based long-read variant calling. *Nature Computational Science*, 2, 797–803. https://doi.org/10.1038/s43588-022-00387-x
-- Aksamentov, I., et al. (2021). Nextclade: clade assignment, mutation calling and quality control for viral genomes. *Journal of Open Source Software*, 6(67), 3773. https://doi.org/10.21105/joss.03773
-  
+- Zheng, Z., et al. (2022). Symphonizing pileup and full-alignment for deep learning-based long-read variant calling. Nature Computational Science, 2, 797–803. https://doi.org/10.1038/s43588-022-00387-x
+- Aksamentov, I., et al. (2021). Nextclade: clade assignment, mutation calling and quality control for viral genomes. Journal of Open Source Software, 6(67), 3773. https://doi.org/10.21105/joss.03773
+
 ## License
 
-This project is distributed under the MIT License. See [LICENSE](LICENSE).
+This project is distributed under the MIT License. See `LICENSE`.
