@@ -103,17 +103,13 @@ The reference database is built and maintained separately from `nf-fluab`. For i
 
 ## Quick start
 
-### 1. Check the pipeline options
-
-```bash
-nextflow run xiaoli-dong/nf-fluab -r ffbc2bd --help
-```
-
-### 2. Run the pipeline
-
 To run the pipeline directly from GitHub:
 
 ```bash
+# Check the pipeline options
+nextflow run xiaoli-dong/nf-fluab -r <revision> --help
+
+# Run the pipeline
 nextflow run xiaoli-dong/nf-fluab \
     -r <revision> \
     --input samplesheet.csv \
