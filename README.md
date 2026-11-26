@@ -194,9 +194,6 @@ The repository includes local test data under `tests/test_data/` and test config
 - Dr. Tarah Lynch and Dr. Matthew Croxen provided extensive technical input.
 
 ## Citations
-
-The `nf-fluab` workflow was developed with reference to existing influenza sequencing workflows and uses the following bioinformatics tools:
-
 - CFIA-NCFAD/nf-flu: https://github.com/CFIA-NCFAD/nf-flu
 - INSaFLU: https://insaflu.insa.pt
 - Di Tommaso, P., et al. (2017). Nextflow enables reproducible computational workflows. Nature Biotechnology, 35, 316–319. https://doi.org/10.1038/nbt.3820
